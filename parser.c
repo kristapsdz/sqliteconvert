@@ -1,0 +1,651 @@
+#include <sys/mman.h>
+#include <sys/queue.h>
+#include <sys/stat.h>
+
+#include <ctype.h>
+#include <err.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "extern.h"
+
+enum	tokent {
+	TOK_EOF,
+	TOK_COMMENT,
+	TOK_IDENT
+};
+
+struct	token {
+	const char	*start;
+	size_t		 sz;
+	int		 eof;
+	enum tokent	 type;
+};
+
+static	void dowarnx(const struct parse *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
+static	void dogwarnx(const struct parse *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
+static	void domsg(const struct parse *, const char *, ...)
+	__attribute__((format(printf, 2, 3)));
+
+static void
+domsg(const struct parse *p, const char *fmt, ...)
+{
+	va_list	 ap;
+
+	if ( ! p->verbose)
+		return;
+	fprintf(stderr, "%s:%zu:%zu: ", 
+		p->fname, p->line + 1, p->col);
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fputc('\n', stderr);
+}
+
+static void
+dogwarnx(const struct parse *p, const char *fmt, ...)
+{
+	va_list	 ap;
+
+	fprintf(stderr, "%s: ", p->fname);
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fputc('\n', stderr);
+}
+
+static void
+dowarnx(const struct parse *p, const char *fmt, ...)
+{
+	va_list	 ap;
+
+	fprintf(stderr, "%s:%zu:%zu: ", 
+		p->fname, p->line + 1, p->col);
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fputc('\n', stderr);
+}
+
+/*
+ * Skip white-space in input buffer.
+ * This can go all the way to the eof.
+ */
+static void
+tok_skipws(struct parse *p)
+{
+
+	while (p->i < p->len && isspace((int)p->map[p->i])) {
+		if ('\n' == p->map[p->i]) {
+			p->line++;
+			p->col = 0;
+		}
+		p->i++;
+		p->col++;
+	}
+}
+
+/*
+ * Returns zero on EOF, non-zero on next word (which is never zero
+ * length).
+ * If "eofok" is non-zero, reports the end-of-file, if found.
+ * FIXME: this will get a lot of work.
+ */
+static int
+tok_next(struct token *tok, struct parse *p, int eofok)
+{
+
+	memset(tok, 0, sizeof(struct token));
+	tok->type = TOK_EOF;
+
+	tok_skipws(p);
+	if (p->i == p->len) {
+		tok->eof = 1;
+		if ( ! eofok)
+			dowarnx(p, "unexpected eof");
+		return(0);
+	}
+
+	/* Are we in a comment? */
+
+	if ('/' == p->map[p->i] && 
+	    p->i < p->len - 2 && '*' == p->map[p->i + 1]) {
+		p->i += 2;
+		p->col += 2;
+		tok_skipws(p);
+		tok->sz = 0;
+		tok->start = &p->map[p->i];
+		while (p->i < p->len - 2) {
+			if ('*' == p->map[p->i] &&
+			    '/' == p->map[p->i + 1])
+				break;
+			if ('\n' == p->map[p->i]) {
+				p->line++;
+				p->col = 0;
+			}
+			p->i++;
+			p->col++;
+			tok->sz++;
+		}
+		if (p->i == p->len - 2) {
+			tok->eof = 1;
+			if ( ! eofok)
+				dowarnx(p, "unexpected eof");
+			return(0);
+		}
+		p->i += 2;
+		p->col += 2;
+		tok->type = TOK_COMMENT;
+		return(1);
+	} 
+
+	p->col++;
+	tok->start = &p->map[p->i++];
+	tok->sz = 1;
+	tok->type = TOK_IDENT;
+
+	if ('(' == p->map[p->i - 1] ||
+	    ',' == p->map[p->i - 1] ||
+	    ')' == p->map[p->i - 1] ||
+	    '\'' == p->map[p->i - 1] ||
+	    '"' == p->map[p->i - 1] ||
+	    ';' == p->map[p->i - 1])
+		return(1);
+
+	while (p->i < p->len && ! isspace((int)p->map[p->i])) {
+		if ('(' == p->map[p->i] ||
+		    ',' == p->map[p->i] ||
+		    ')' == p->map[p->i] ||
+		    '\'' == p->map[p->i] ||
+		    '"' == p->map[p->i] ||
+		    ';' == p->map[p->i])
+			break;
+		p->i++;
+		tok->sz++;
+		p->col++;
+	}
+
+	return(1);
+}
+
+static int
+tok_strsame(const struct token *tok, const char *str)
+{
+
+	return(0 == strncasecmp(str, tok->start, tok->sz));
+}
+
+static void
+tok_skipstmt(struct parse *p)
+{
+	struct token	 tok;
+
+	do {
+		do if ( ! tok_next(&tok, p, 0)) 
+			return;
+		while (TOK_COMMENT == tok.type);
+	} while ( ! tok_strsame(&tok, ";"));
+}
+
+static int
+tok_nextsame(struct token *tok, struct parse *p, 
+	const char *str, int eofok)
+{
+
+	do if ( ! tok_next(tok, p, eofok)) 
+		return(-1);
+	while (TOK_COMMENT == tok->type);
+
+	return(tok_strsame(tok, str));
+}
+
+static int
+tok_nextexpect(struct token *tok, struct parse *p, const char *str)
+{
+	int	 c;
+
+	if ((c = tok_nextsame(tok, p, str, 0)) > 0)
+		return(1);
+	else if (c < 0)
+		return(0);
+
+	dowarnx(p, "unexpected: %.*s (wanted \"%s\")", 
+		(int)tok->sz, tok->start, str);
+	return(0);
+}
+
+/*
+ * Return zero on failure and non-zero on success.
+ */
+static int
+schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
+{
+	struct col	*tcol;
+	struct fkey	*fkey;
+
+	if ( ! tok_nextexpect(tok, p, "key"))
+		return(0);
+	if ( ! tok_nextexpect(tok, p, "("))
+		return(0);
+
+	/* Column name. */
+	do if ( ! tok_next(tok, p, 0))
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	TAILQ_FOREACH(tcol, &tab->colq, entry)
+		if ( ! strncmp(tcol->name, tok->start, tok->sz))
+			break;
+
+	if (NULL != tcol) {
+		fkey = calloc(1, sizeof(struct fkey));
+		if (NULL == fkey)
+			err(EXIT_FAILURE, "calloc");
+		fkey->col = tcol;
+		TAILQ_INSERT_TAIL(&p->fkeyq, fkey, entry);
+	} else
+		dowarnx(p, "cannot find column: %.*s",
+			(int)tok->sz, tok->start);
+
+	if ( ! tok_nextexpect(tok, p, ")"))
+		return(0);
+	if ( ! tok_nextexpect(tok, p, "references"))
+		return(0);
+
+	/* Table name. */
+	do if ( ! tok_next(tok, p, 0)) 
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	fkey->rtab = strndup(tok->start, tok->sz);
+	if (NULL == fkey->rtab)
+		err(EXIT_FAILURE, "strndup");
+
+	if ( ! tok_nextexpect(tok, p, "("))
+		return(0);
+
+	/* Column name. */
+	do if ( ! tok_next(tok, p, 0))
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	fkey->rcol = strndup(tok->start, tok->sz);
+	if (NULL == fkey->rcol)
+		err(EXIT_FAILURE, "strndup");
+
+	if (NULL != tcol)
+		domsg(p, "added foreign key to %s.%s: %s.%s",
+			tcol->tab->name, tcol->name,
+			fkey->rtab, fkey->rcol);
+
+	return(tok_nextexpect(tok, p, ")"));
+}
+
+/*
+ * Returns <0 on failure, 0 if no more columns, 1 if more columns.
+ */
+static int
+schema_column(struct token *tok, struct parse *p, struct tab *tab)
+{
+	size_t	 	 nest;
+	struct col	*col;
+	char		*comment;
+
+	/* Parse identifier or sub-clause. */
+
+	comment = NULL;
+
+	if ( ! tok_next(tok, p, 0)) 
+		return(-1);
+	else if (TOK_COMMENT == tok->type) {
+		comment = strndup(tok->start, tok->sz);
+		if (NULL == comment)
+			err(EXIT_FAILURE, "strndup");
+		do if ( ! tok_next(tok, p, 0)) {
+			free(comment);
+			return(-1);
+		} while (TOK_COMMENT == tok->type);
+	}
+
+	/* Check sub-clauses. */
+
+	if ( ! tok_strsame(tok, "unique") &&
+	     ! tok_strsame(tok, "foreign")) {
+		col = calloc(1, sizeof(struct col));
+		if (NULL == col)
+			err(EXIT_FAILURE, "calloc");
+		col->name = strndup(tok->start, tok->sz);
+		if (NULL == col->name)
+			err(EXIT_FAILURE, "strndup");
+		col->tab = tab;
+		col->idx = tab->ncol++;
+		col->comment = comment;
+		TAILQ_INSERT_TAIL(&tab->colq, col, entry);
+		domsg(p, "added column: %s.%s", 
+			col->tab->name, col->name);
+	} else 
+		free(comment);
+
+	if (tok_strsame(tok, "foreign"))
+		if ( ! schema_foreign(tok, p, tab))
+			return(0);
+
+	for (nest = 1; nest > 0; ) {
+		do if ( ! tok_next(tok, p, 0))
+			return(-1);
+		while (TOK_COMMENT == tok->type);
+
+		if (tok_strsame(tok, "("))
+			nest++;
+		else if (tok_strsame(tok, ",") && 1 == nest)
+			break;
+		else if (tok_strsame(tok, ")"))
+			nest--;
+	}
+
+	if (tok_strsame(tok, ","))
+		return(1);
+	if (tok_strsame(tok, ")"))
+		return(0);
+
+	dowarnx(p, "syntax error trailing column");
+	return(-1);
+}
+
+/*
+ * Parse a table definition.
+ * Returns zero on failure, non-zero on success.
+ */
+static int
+schema_table(struct token *tok, struct parse *p, 
+	char **comment, unsigned int flags)
+{
+	int	 	 c;
+	struct tab	*tab;
+
+	/* Start trying to get the table identifier. */
+
+	do if ( ! tok_next(tok, p, 0))
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	if (tok_strsame(tok, "if")) {
+		if ( ! tok_nextsame(tok, p, "not", 0))
+			return(0);
+		if ( ! tok_nextsame(tok, p, "exists", 0))
+			return(0);
+		do if ( ! tok_next(tok, p, 0))
+			return(0);
+		while (TOK_COMMENT == tok->type);
+		flags |= TAB_IF_NOT_EXIST;
+	}
+
+	/* Allocate table in queue. */
+
+	tab = calloc(1, sizeof(struct tab));
+	if (NULL == tab)
+		err(EXIT_FAILURE, "calloc");
+	tab->name = strndup(tok->start, tok->sz);
+	if (NULL == tab->name)
+		err(EXIT_FAILURE, "strndup");
+	tab->idx = p->ntab++;
+	tab->comment = *comment;
+	*comment = NULL;
+	tab->flags = flags;
+	TAILQ_INIT(&tab->colq);
+	TAILQ_INSERT_TAIL(&p->tabq, tab, entry);
+	domsg(p, "added table: %s", tab->name);
+
+	/* Parse through all of our columns. */
+
+	if (0 == (c = tok_nextsame(tok, p, "(", 0))) {
+		dowarnx(p, "syntax error leading columns");
+		return(0);
+	} else if (c < 0)
+		return(0);
+
+	while ((c = schema_column(tok, p, tab)) > 0) 
+		continue;
+	if (c < 0)
+		return(0);
+
+	if ( ! tok_strsame(tok, ")")) {
+		dowarnx(p, "syntax error trailing columns");
+		return(0);
+	}
+
+	/* 
+	 * See if we're at the end of the table statement, which can
+	 * also have a "without rowid" clause.
+	 */
+
+	do if ( ! tok_next(tok, p, 0))
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	if (tok_strsame(tok, "without")) {
+		if (0 == (c = tok_nextsame(tok, p, "rowid", 0))) {
+			dowarnx(p, "syntax error leading columns");
+			return(0);
+		} else if (c < 0)
+			return(0);
+		do if ( ! tok_next(tok, p, 0))
+			return(0);
+		while (TOK_COMMENT == tok->type);
+	}
+
+	if (tok_strsame(tok, ";"))
+		return(1);
+
+	dowarnx(p, "syntax error at end of table statement");
+	return(0);
+}
+
+/* 
+ * Processes a "create xxxx" statement.
+ * Returns zero on failure, <0 on end of file, or >0 at the end of the
+ * creation.
+ * This should be at a semicolon.
+ */
+static int
+schema_create(struct token *tok, struct parse *p, char **comment)
+{
+	unsigned int	 flags = 0;
+
+	do if ( ! tok_next(tok, p, 0))
+		return(-1);
+	while (TOK_COMMENT == tok->type);
+
+	/* Pass over "temp" and "temporary" statements. */
+
+	if (tok_strsame(tok, "temp") ||
+	    tok_strsame(tok, "temporary")) {
+		flags = TAB_TEMP;
+		do if ( ! tok_next(tok, p, 0))
+			return(-1);
+		while (TOK_COMMENT == tok->type);
+	}
+
+	/* Try to read the "table", if it exists. */
+
+	if ( ! tok_strsame(tok, "table")) {
+		dowarnx(p, "ignoring non-table creation");
+		return(0);
+	} 
+
+	return(schema_table(tok, p, comment, flags) ? 1 : -1);
+}
+
+/*
+ * Cross-reference foreign key entries.
+ * Skips all non-existent references.
+ */
+static void
+foreign_keys(struct parse *p)
+{
+	struct tab	*tab;
+	struct col	*col;
+	struct fkey	*fkey;
+
+	TAILQ_FOREACH(fkey, &p->fkeyq, entry) {
+		if (NULL == fkey->col)
+			continue;
+		TAILQ_FOREACH(tab, &p->tabq, entry)
+			if (0 == strcmp(tab->name, fkey->rtab))
+				break;
+		if (NULL == tab) {
+			dogwarnx(p, "unknown foreign key "
+				"table on %s.%s: %s.%s", 
+				fkey->col->tab->name, 
+				fkey->col->name, 
+				fkey->rtab, fkey->rcol);
+			continue;
+		}
+		TAILQ_FOREACH(col, &tab->colq, entry)
+			if (0 == strcmp(col->name, fkey->rcol))
+				break;
+		if (NULL == tab) {
+			dogwarnx(p, "unknown foreign key "
+				"column on %s.%s: %s.%s", 
+				fkey->col->tab->name,
+				fkey->col->name, 
+				fkey->rtab, fkey->rcol);
+			continue;
+		}
+		if (NULL != fkey->col->fkey) {
+			dogwarnx(p, "foreign key exists: %s.%s", 
+				fkey->col->fkey->tab->name, 
+				fkey->col->fkey->name);
+			continue;
+		}
+		fkey->col->fkey = col;
+	}
+}
+
+void
+sqlite_schema_free(struct parse *p)
+{
+	struct fkey	*fkey;
+	struct col	*col;
+	struct tab	*tab;
+
+	while (NULL != (fkey = TAILQ_FIRST(&p->fkeyq))) {
+		TAILQ_REMOVE(&p->fkeyq, fkey, entry);
+		free(fkey->rtab);
+		free(fkey->rcol);
+		free(fkey);
+	}
+
+	while (NULL != (tab = TAILQ_FIRST(&p->tabq))) {
+		TAILQ_REMOVE(&p->tabq, tab, entry);
+		while (NULL != (col = TAILQ_FIRST(&tab->colq))) {
+			TAILQ_REMOVE(&tab->colq, col, entry);
+			free(col->name);
+			free(col->comment);
+			free(col);
+		}
+		free(tab->name);
+		free(tab);
+	}
+}
+
+int
+sqlite_schema_parse(const char *fname, struct parse *p) 
+{
+	int	 	 rc, c, fd;
+	void		*map;
+	struct stat	 st;
+	struct token	 tok;
+	char		*comment;
+
+	/* Open the file in read-only mode and map it. */
+
+	if (-1 == (fd = open(fname, O_RDONLY, 0))) {
+		warn("%s", fname);
+		return(0);
+	} else if (-1 == fstat(fd, &st)) {
+		warn("%s", fname);
+		close(fd);
+		return(0);
+	} 
+	
+	map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+
+	if (MAP_FAILED == map) {
+		warn("%s", fname);
+		close(fd);
+		return(0);
+	}
+
+	/* Initialise relevant parts of the parser. */
+
+	TAILQ_INIT(&p->tabq);
+	TAILQ_INIT(&p->fkeyq);
+	p->map = map;
+	p->i = p->line = p->col = p->ntab = 0;
+	p->len = st.st_size;
+	p->fname = fname;
+	
+	/*
+	 * Top-level of parse.
+	 * Look for a statement that begins with "create", which will
+	 * indicate that we may have a table.
+	 * (It might start with a comment, which we should keep track of
+	 * to pump into any new table.)
+	 * Ignore all other statements by continuing til the semicolon.
+	 */
+
+	comment = NULL;
+	rc = 0;
+
+	while (p->i < p->len) {
+		if ( ! tok_next(&tok, p, 1)) {
+			rc = 1;
+			break;
+		} else if (TOK_COMMENT == tok.type) {
+			free(comment);
+			comment = strndup(tok.start, tok.sz);
+			if (NULL == comment) 
+				err(EXIT_FAILURE, "strndup");
+			do if ( ! (c = tok_next(&tok, p, 0)))
+				break;
+			while (TOK_COMMENT == tok.type);
+			if (0 == c)
+				break;
+		}
+
+		if ( ! tok_strsame(&tok, "create")) {
+			domsg(p, "ignoring top-level statement");
+			tok_skipstmt(p);
+			continue;
+		} 
+		
+		if (0 == (c = schema_create(&tok, p, &comment))) {
+			tok_skipstmt(p);
+			continue;
+		} else if (c < 0)
+			break;
+
+		if (tok_strsame(&tok, ";"))
+			continue;
+		dowarnx(p, "bad token at end of statement");
+		break;
+	}
+
+	free(comment);
+	munmap(map, st.st_size);
+	close(fd);
+
+	/* On success, compute foreign keys. */
+
+	if (1 == rc)
+		foreign_keys(p);
+
+	return(rc);
+}
