@@ -1,5 +1,21 @@
-#ifndef SQLITE_SCHEMA_H
-#define SQLITE_SCHEMA_H
+/*	$Id$ */
+/*
+ * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+#ifndef EXTERN_H
+#define EXTERN_H
 
 struct	col {
 	char		*name;
@@ -51,12 +67,10 @@ struct	parse {
 
 __BEGIN_DECLS
 
-int
-sqlite_schema_parse(const char *fname, struct parse *p);
-
-void
-sqlite_schema_free(struct parse *p);
+void	 sqlite_schema_free(struct parse *);
+char	*sqlite_schema_id(const char *, const char *);
+int	 sqlite_schema_parse(const char *, struct parse *);
 
 __END_DECLS
 
-#endif
+#endif /*!EXTERN_H*/

@@ -1,3 +1,19 @@
+/*	$Id$ */
+/*
+ * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 #include <sys/queue.h>
 
 #include <ctype.h>
@@ -8,18 +24,6 @@
 #include <unistd.h>
 
 #include "extern.h"
-
-static void
-safe_fmtstring(char *p)
-{
-
-	for ( ; '\0' != *p; p++) {
-		if (isalnum((int)*p) || '-' == *p ||
-		    '_' == *p || '.' == *p)
-			continue;
-		*p = '_';
-	}
-}
 
 static void
 safe_putstring(const char *p)
@@ -51,28 +55,22 @@ output(struct parse *p)
 	struct tab	*tab;
 	struct col	*col;
 	char		*cp;
-	int		 rc;
 
 	puts("digraph G {");
 	TAILQ_FOREACH(tab, &p->tabq, entry) {
-		if (NULL == (cp = strdup(tab->name)))
-			err(EXIT_FAILURE, "strdup");
-		safe_fmtstring(cp);
+		cp = sqlite_schema_id(tab->name, NULL);
 		printf("\ttable%zu [label=<"
 			"<TABLE HREF=\"#tab-%s\">\n",
 		       tab->idx, cp);
 		free(cp);
 		TAILQ_FOREACH(col, &tab->colq, entry) {
-			rc = asprintf(&cp, "%s.%s",
-				col->tab->name, col->name);
-			if (rc < 0)
-				err(EXIT_FAILURE, "asprintf");
-			safe_fmtstring(cp);
+			cp = sqlite_schema_id
+				(col->tab->name, col->name);
 			printf("\t\t\t<TR><TD HREF=\"#col-%s\" "
 				"PORT=\"f%zu\">", cp, col->idx);
+			free(cp);
 			safe_putstring(col->name);
 			puts("</TD></TR>");
-			free(cp);
 		}
 		puts("\t\t</TABLE>>];");
 		TAILQ_FOREACH(col, &tab->colq, entry) {

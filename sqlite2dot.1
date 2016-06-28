@@ -1,0 +1,74 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: June 25 2016 $
+.Dt SQLITE2DOT 1
+.Os
+.Sh NAME
+.Nm sqlite2dot
+.Nd convert sqlite3 schema to GraphViz input
+.\" .Sh LIBRARY
+.\" For sections 2, 3, and 9 only.
+.\" Not used in OpenBSD.
+.Sh SYNOPSIS
+.Nm sqlite2dot
+.Op Fl v
+.Ar schema
+.Sh DESCRIPTION
+The
+.Nm
+utility converts an
+.Xr sqlite3 1
+schema file to a GraphViz file readable by
+.Xr dot 1 .
+Its only argument is
+.Fl v ,
+which emits informational messages to standard error.
+.Pp
+The outputted GraphViz file serialises tables as HTML-label nodes, each
+of which has one row per table column.
+Table nodes are connected by foreign keys.
+.Pp
+.Nm
+is best when creating image maps by piping into
+.Xr dot 1
+with
+.Fl T Ar cmapx
+then
+.Fl T Ar png
+or similar backing, then using the
+.Li usemap
+attribute for the HTML
+.Li <img>
+tag.
+You can then use
+.Xr sqlite2html 1
+for linking to the documentation.
+.Sh SEE ALSO
+.Xr dot 1 ,
+.Xr sqlite2html 1 ,
+.Xr sqlite3 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.Sh CAVEATS
+The schema language accepted by
+.Nm
+is currently limited to the table declaration with a subset of the
+column specification.
+.\" .Sh BUGS
+.\" .Sh SECURITY CONSIDERATIONS
+.\" Not used in OpenBSD.
