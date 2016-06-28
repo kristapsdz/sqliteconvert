@@ -1,3 +1,19 @@
+/*	$Id$ */
+/*
+ * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 #include <sys/mman.h>
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -33,6 +49,10 @@ static	void dogwarnx(const struct parse *, const char *, ...)
 static	void domsg(const struct parse *, const char *, ...)
 	__attribute__((format(printf, 2, 3)));
 
+/*
+ * Emit some debugging information.
+ * This will only work if we're in verbose mode.
+ */
 static void
 domsg(const struct parse *p, const char *fmt, ...)
 {
@@ -48,6 +68,9 @@ domsg(const struct parse *p, const char *fmt, ...)
 	fputc('\n', stderr);
 }
 
+/*
+ * Equivalent to warnx(3) but also showing our file.
+ */
 static void
 dogwarnx(const struct parse *p, const char *fmt, ...)
 {
@@ -60,6 +83,10 @@ dogwarnx(const struct parse *p, const char *fmt, ...)
 	fputc('\n', stderr);
 }
 
+/*
+ * Equivalent to warnx(3) but also showing our file, line number, and
+ * current column number.
+ */
 static void
 dowarnx(const struct parse *p, const char *fmt, ...)
 {
@@ -92,8 +119,7 @@ tok_skipws(struct parse *p)
 }
 
 /*
- * Returns zero on EOF, non-zero on next word (which is never zero
- * length).
+ * Returns zero on EOF, non-zero on next word.
  * If "eofok" is non-zero, reports the end-of-file, if found.
  * FIXME: this will get a lot of work.
  */
@@ -112,10 +138,14 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 		return(0);
 	}
 
-	/* Are we in a comment? */
+	/* 
+	 * Are we in a multi-line comment?
+	 * If so, read until we hit the end of comment.
+	 * Suck down everything but the leading white-space.
+	 */
 
-	if ('/' == p->map[p->i] && 
-	    p->i < p->len - 2 && '*' == p->map[p->i + 1]) {
+	if ('/' == p->map[p->i] && p->i < p->len - 2 && 
+	    '*' == p->map[p->i + 1]) {
 		p->i += 2;
 		p->col += 2;
 		tok_skipws(p);
@@ -144,6 +174,36 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 		tok->type = TOK_COMMENT;
 		return(1);
 	} 
+
+	/*
+	 * Are we in a single-line comment?
+	 * If so, read only the current line.
+	 */
+
+	if ('-' == p->map[p->i] && p->i < p->len - 2 && 
+	    '-' == p->map[p->i + 1]) {
+		p->i += 2;
+		p->col += 2;
+		tok->sz = 0;
+		tok->start = &p->map[p->i];
+		while (p->i < p->len && '\n' != p->map[p->i])  {
+			p->i++;
+			p->col++;
+			tok->sz++;
+		}
+		if (p->i == p->len) {
+			tok->eof = 1;
+			if ( ! eofok)
+				dowarnx(p, "unexpected eof");
+			return(0);
+		}
+		p->i++;
+		p->col = 1;
+		p->line++;
+		tok->type = TOK_COMMENT;
+		return(1);
+	}
+	    
 
 	p->col++;
 	tok->start = &p->map[p->i++];
@@ -218,6 +278,42 @@ tok_nextexpect(struct token *tok, struct parse *p, const char *str)
 	dowarnx(p, "unexpected: %.*s (wanted \"%s\")", 
 		(int)tok->sz, tok->start, str);
 	return(0);
+}
+
+static int
+comment_append(struct token *tok, struct parse *p, 
+	int eofok, char **outp)
+{
+	char	*comment;
+	size_t	 sz;
+
+	comment = NULL;
+	sz = 0;
+
+	for (;;) {
+		if ( ! tok_next(tok, p, eofok)) {
+			free(comment);
+			return(0);
+		} else if (TOK_COMMENT != tok->type)
+			break;
+
+		if (NULL == comment) {
+			comment = strndup(tok->start, tok->sz);
+			if (NULL == comment)
+				err(EXIT_FAILURE, "strndup");
+			sz = strlen(comment);
+		} else {
+			comment = realloc(comment, sz + tok->sz + 1);
+			if (NULL == comment)
+				err(EXIT_FAILURE, "realloc");
+			memcpy(comment + sz, tok->start, tok->sz);
+			sz += tok->sz;
+			comment[sz] = '\0';
+		}
+	}
+
+	*outp = comment;
+	return(1);
 }
 
 /*
@@ -297,21 +393,8 @@ schema_column(struct token *tok, struct parse *p, struct tab *tab)
 	struct col	*col;
 	char		*comment;
 
-	/* Parse identifier or sub-clause. */
-
-	comment = NULL;
-
-	if ( ! tok_next(tok, p, 0)) 
+	if ( ! comment_append(tok, p, 0, &comment))
 		return(-1);
-	else if (TOK_COMMENT == tok->type) {
-		comment = strndup(tok->start, tok->sz);
-		if (NULL == comment)
-			err(EXIT_FAILURE, "strndup");
-		do if ( ! tok_next(tok, p, 0)) {
-			free(comment);
-			return(-1);
-		} while (TOK_COMMENT == tok->type);
-	}
 
 	/* Check sub-clauses. */
 
@@ -551,6 +634,7 @@ sqlite_schema_free(struct parse *p)
 			free(col);
 		}
 		free(tab->name);
+		free(tab->comment);
 		free(tab);
 	}
 }
@@ -605,22 +689,11 @@ sqlite_schema_parse(const char *fname, struct parse *p)
 	rc = 0;
 
 	while (p->i < p->len) {
-		if ( ! tok_next(&tok, p, 1)) {
+		free(comment);
+		if ( ! comment_append(&tok, p, 1, &comment)) {
 			rc = 1;
 			break;
-		} else if (TOK_COMMENT == tok.type) {
-			free(comment);
-			comment = strndup(tok.start, tok.sz);
-			if (NULL == comment) 
-				err(EXIT_FAILURE, "strndup");
-			do if ( ! (c = tok_next(&tok, p, 0)))
-				break;
-			while (TOK_COMMENT == tok.type);
-			if (0 == c)
-				break;
-		}
-
-		if ( ! tok_strsame(&tok, "create")) {
+		} else if ( ! tok_strsame(&tok, "create")) {
 			domsg(p, "ignoring top-level statement");
 			tok_skipstmt(p);
 			continue;
