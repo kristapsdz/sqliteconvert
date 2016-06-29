@@ -50,7 +50,10 @@ The
 .Li <dd>
 for each list begins with a
 .Li <div class="comment">
-if the table or column is preceeded by comments.
+if the table or column is preceeded by comments
+For columns with a foreign key reference, this will be preceeded by
+.Li <div class="foreign">
+containing an anchor to the key having a text node of the endpoint.
 .Pp
 The
 .Li @

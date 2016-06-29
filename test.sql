@@ -24,6 +24,7 @@ CREATE TABLE "tes't1" (
 	test2id INTEGER NOT NULL,
 	/* This is a unique value. */
 	foo INTEGER NOT NULL,
+	baz INTEGER NOT NULL,
 	-- A primary key. 
 	-- This is multiple lines long.
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -37,7 +38,7 @@ CREATE TABLE "tes't1" (
 -- It is also multi-line.
 CREATE TABLE test2 (
 	/* This column does something. */
-	bar INTEGER NOT NULL,
+	bar INTEGER NOT NULL REFERENCES "tes't1"(baz),
 	/* This is a primary key. \\-character---and an \@-sign. */
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
 );

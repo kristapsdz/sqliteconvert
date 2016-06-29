@@ -339,20 +339,62 @@ comment_append(struct token *tok, struct parse *p,
 }
 
 /*
+ * Process what comes after "references" within a column declaration.
+ * Return zero on failure and non-zero on success.
+ */
+static int
+schema_column_references(struct token *tok, 
+	struct parse *p, struct col *col)
+{
+	struct fkey	*fkey;
+
+	do if ( ! tok_next(tok, p, 0))
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	fkey = calloc(1, sizeof(struct fkey));
+	if (NULL == fkey)
+		err(EXIT_FAILURE, "calloc");
+	fkey->col = col;
+	fkey->rtab = strndup(tok->start, tok->sz);
+	if (NULL == fkey->rtab)
+		err(EXIT_FAILURE, "strndup");
+	TAILQ_INSERT_TAIL(&p->fkeyq, fkey, entry);
+
+	if ( ! tok_nextexpect(tok, p, "("))
+		return(0);
+	do if ( ! tok_next(tok, p, 0))
+		return(0);
+	while (TOK_COMMENT == tok->type);
+
+	fkey->rcol = strndup(tok->start, tok->sz);
+	if (NULL == fkey->rcol)
+		err(EXIT_FAILURE, "strndup");
+
+	domsg(p, "added reference to %s.%s: %s.%s",
+		col->tab->name, col->name,
+		fkey->rtab, fkey->rcol);
+	return(tok_nextexpect(tok, p, ")"));
+}
+
+/*
+ * Process what follows "foreign" as a column constraint, e.g., "foreign
+ * key (moop) references foo(bar)".
  * Return zero on failure and non-zero on success.
  */
 static int
 schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 {
 	struct col	*tcol;
-	struct fkey	*fkey;
+	struct fkey	*fkey = NULL;
 
 	if ( ! tok_nextexpect(tok, p, "key"))
 		return(0);
 	if ( ! tok_nextexpect(tok, p, "("))
 		return(0);
 
-	/* Column name. */
+	/* Get and look up column name. */
+
 	do if ( ! tok_next(tok, p, 0))
 		return(0);
 	while (TOK_COMMENT == tok->type);
@@ -361,7 +403,6 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 		if ( ! strncmp(tcol->name, tok->start, tok->sz))
 			break;
 
-	fkey = NULL;
 	if (NULL != tcol) {
 		fkey = calloc(1, sizeof(struct fkey));
 		if (NULL == fkey)
@@ -377,7 +418,8 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 	if ( ! tok_nextexpect(tok, p, "references"))
 		return(0);
 
-	/* Table name. */
+	/* Table name: keep if we have our column. */
+
 	do if ( ! tok_next(tok, p, 0)) 
 		return(0);
 	while (TOK_COMMENT == tok->type);
@@ -391,7 +433,8 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 	if ( ! tok_nextexpect(tok, p, "("))
 		return(0);
 
-	/* Column name. */
+	/* Column name: keep if we have our column. */
+
 	do if ( ! tok_next(tok, p, 0))
 		return(0);
 	while (TOK_COMMENT == tok->type);
@@ -406,7 +449,6 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 		domsg(p, "added foreign key to %s.%s: %s.%s",
 			tcol->tab->name, tcol->name,
 			fkey->rtab, fkey->rcol);
-
 	return(tok_nextexpect(tok, p, ")"));
 }
 
@@ -457,6 +499,11 @@ schema_column(struct token *tok, struct parse *p, struct tab *tab)
 			return(-1);
 		while (TOK_COMMENT == tok->type);
 
+		if (NULL != col && tok_strsame(tok, "references")) {
+			if ( ! schema_column_references(tok, p, col))
+				return(0);
+			continue;
+		}
 		if (tok_strsame(tok, "("))
 			nest++;
 		else if (tok_strsame(tok, ",") && 1 == nest)

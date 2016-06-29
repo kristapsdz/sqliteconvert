@@ -72,7 +72,7 @@ safe_putbuf(const char *p, size_t sz)
  * See safe_putbuf().
  */
 static void
-safe_putstring(const char *p)
+safe_putstr(const char *p)
 {
 
 	safe_putbuf(p, strlen(p));
@@ -166,7 +166,7 @@ output(const struct opts *opts, struct parse *p)
 		cp = sqlite_schema_id(tab->name, NULL);
 		printf("\t<dt id=\"%s-%s\">", opts->prefix, cp);
 		free(cp);
-		safe_putstring(tab->name);
+		safe_putstr(tab->name);
 		puts("</dt>");
 		puts("\t<dd>");
 		if (NULL != tab->comment) {
@@ -182,9 +182,23 @@ output(const struct opts *opts, struct parse *p)
 			printf("\t\t\t<dt id=\"%s-%s\">", 
 				opts->prefix, cp);
 			free(cp);
-			safe_putstring(col->name);
+			safe_putstr(col->name);
 			puts("</dt>");
 			puts("\t\t\t<dd>");
+			if (NULL != col->fkey) {
+				fputs("\t\t\t\t<div "
+					"class=\"foreign\">", stdout);
+				cp = sqlite_schema_id
+					(col->fkey->tab->name, 
+					 col->fkey->name);
+				printf("<a href=\"#%s-%s\">", 
+					opts->prefix, cp);
+				free(cp);
+				safe_putstr(col->fkey->tab->name);
+				safe_putstr(".");
+				safe_putstr(col->fkey->name);
+				puts("</a></div>");
+			}
 			if (NULL != col->comment) {
 				puts("\t\t\t\t<div class=\"comment\">");
 				fputs("\t\t\t\t\t", stdout);
