@@ -78,6 +78,15 @@ safe_putstring(const char *p)
 	safe_putbuf(p, strlen(p));
 }
 
+static int
+escaped_streq(const char *op, const char *p, const char *str)
+{
+
+	if (op != p && '\\' == p[-1])
+		return(0);
+	return(0 == strncmp(p, str, strlen(str)));
+}
+
 /*
  * Put a comment into the stdout HTML stream.
  * This will automatically convert @-references into links.
@@ -90,7 +99,23 @@ safe_putcomment(const struct opts *opts, const char *p)
 	size_t		 sz;
 
 	for (op = p; '\0' != *p; ) {
-		if ('@' != *p) {
+		if (escaped_streq(op, p, "``")) {
+			fputs("&#x201c;", stdout);
+			p += 2;
+			continue;
+		} else if (escaped_streq(op, p, "\'\'")) {
+			fputs("&#x201d;", stdout);
+			p += 2;
+			continue;
+		} else if (escaped_streq(op, p, "--")) {
+			fputs("&#8211;", stdout);
+			p += 2;
+			continue;
+		} else if (escaped_streq(op, p, "---")) {
+			fputs("&#8212;", stdout);
+			p += 3;
+			continue;
+		} else if ('@' != *p) {
 			safe_putchar(*p++);
 			continue;
 		} else if (op == p || '\\' == p[-1]) {
