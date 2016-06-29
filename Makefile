@@ -17,7 +17,7 @@ sqlite2dot: dot.o id.o parser.o
 sqlite2html: html.o id.o parser.o
 	$(CC) -o $@ html.o id.o parser.o
 
-install:
+install: all
 	mkdir -p $(BINDIR)
 	mkdir -p $(MAN1DIR)
 	install -m 0555 $(BINS) $(BINDIR)

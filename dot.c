@@ -62,6 +62,9 @@ output(struct parse *p)
 		printf("\ttable%zu [label=<"
 			"<TABLE HREF=\"#sql-%s\">\n",
 		       tab->idx, cp);
+		printf("\t\t\t<TR><TD HREF=\"#sql-%s\">", cp);
+		safe_putstring(tab->name);
+		puts("</TD></TR>");
 		free(cp);
 		TAILQ_FOREACH(col, &tab->colq, entry) {
 			cp = sqlite_schema_id

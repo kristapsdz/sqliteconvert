@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: June 25 2016 $
+.Dd $Mdocdate: June 28 2016 $
 .Dt SQLITE2HTML 1
 .Os
 .Sh NAME
@@ -35,14 +35,39 @@ utility converts an
 schema file to an HTML5 fragment.
 Its only argument is
 .Fl v ,
-which emits informational messages to standard error.
+which causes the parser to emit informational messages on stderr.
 .Pp
-The outputted HTML5 is a series of
-.Li <dl>
-lists consisting of tables; then for each table, columns.
-It is designed to be called by
-.Xr sqlite2dot 1
-when outputted as a client-side image map.
+The outputted HTML5 fragment consists of a
+.Li <dl class="tabs">
+list consisting of tables; and then for each table, a
+.Li <dl class="cols">
+list of columns.
+The
+.Li <dt>
+for each list entry consists of the name of the table or column and has
+its ID attribute set to the transformed name.
+The
+.Li <dd>
+for each list begins with a
+.Li <div class="comment">
+if the table or column is preceeded by comments.
+.Pp
+The
+.Li @
+character within a comment is special: the following table name and
+optional column name will be transformed into an HTML link to the
+identifier.
+Thus,
+.Li @foo.bar
+will point to the
+.Dq bar
+column in table
+.Dq foo .
+If this identifier is not followed by white-space, you may quote the
+identifier to prevent subsequent characters from being pulled into the
+identifier, e.g.,
+.Li @"foo.bar" .
+.Pp
 .Sh SEE ALSO
 .Xr sqlite2dot 1 ,
 .Xr sqlite3 1

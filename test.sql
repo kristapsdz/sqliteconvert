@@ -18,7 +18,8 @@
 PRAGMA journal_mode=WAL;
 
 /* This table has its comments in here. */
-CREATE TABLE test1 (
+/* It references @test2 and @"test2". */
+CREATE TABLE "tes't1" (
 	/* This is a foreign key. */
 	test2id INTEGER NOT NULL,
 	/* This is a unique value. */

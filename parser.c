@@ -32,6 +32,7 @@
 enum	tokent {
 	TOK_EOF,
 	TOK_COMMENT,
+	TOK_LITERAL,
 	TOK_IDENT
 };
 
@@ -100,6 +101,28 @@ dowarnx(const struct parse *p, const char *fmt, ...)
 	fputc('\n', stderr);
 }
 
+static size_t
+tok_nextchar(struct parse *p, size_t n)
+{
+	size_t	 j;
+
+	for (j = 0; j < n && p->i < p->len; j++, p->i++, p->col++)
+		if ('\n' == p->map[p->i]) {
+			p->line++;
+			p->col = 0;
+		}
+
+	return(j);
+}
+
+static void
+tok_init(struct token *tok, struct parse *p)
+{
+
+	tok->sz = 0;
+	tok->start = &p->map[p->i];
+}
+
 /*
  * Skip white-space in input buffer.
  * This can go all the way to the eof.
@@ -108,14 +131,8 @@ static void
 tok_skipws(struct parse *p)
 {
 
-	while (p->i < p->len && isspace((int)p->map[p->i])) {
-		if ('\n' == p->map[p->i]) {
-			p->line++;
-			p->col = 0;
-		}
-		p->i++;
-		p->col++;
-	}
+	while (p->i < p->len && isspace((int)p->map[p->i])) 
+		tok_nextchar(p, 1);
 }
 
 /*
@@ -126,6 +143,7 @@ tok_skipws(struct parse *p)
 static int
 tok_next(struct token *tok, struct parse *p, int eofok)
 {
+	int	 quot;
 
 	memset(tok, 0, sizeof(struct token));
 	tok->type = TOK_EOF;
@@ -138,29 +156,22 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 		return(0);
 	}
 
-	/* 
-	 * Are we in a multi-line comment?
-	 * If so, read until we hit the end of comment.
-	 * Suck down everything but the leading white-space.
-	 */
 
 	if ('/' == p->map[p->i] && p->i < p->len - 2 && 
 	    '*' == p->map[p->i + 1]) {
-		p->i += 2;
-		p->col += 2;
+		/* 
+		 * Are we in a multi-line comment?
+		 * If so, read until we hit the end of comment.
+		 * Suck down everything but the leading white-space.
+		 */
+		tok_nextchar(p, 2);
 		tok_skipws(p);
-		tok->sz = 0;
-		tok->start = &p->map[p->i];
+		tok_init(tok, p);
 		while (p->i < p->len - 2) {
 			if ('*' == p->map[p->i] &&
 			    '/' == p->map[p->i + 1])
 				break;
-			if ('\n' == p->map[p->i]) {
-				p->line++;
-				p->col = 0;
-			}
-			p->i++;
-			p->col++;
+			tok_nextchar(p, 1);
 			tok->sz++;
 		}
 		if (p->i == p->len - 2) {
@@ -169,26 +180,19 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 				dowarnx(p, "unexpected eof");
 			return(0);
 		}
-		p->i += 2;
-		p->col += 2;
+		tok_nextchar(p, 2);
 		tok->type = TOK_COMMENT;
 		return(1);
-	} 
-
-	/*
-	 * Are we in a single-line comment?
-	 * If so, read only the current line.
-	 */
-
-	if ('-' == p->map[p->i] && p->i < p->len - 2 && 
-	    '-' == p->map[p->i + 1]) {
-		p->i += 2;
-		p->col += 2;
-		tok->sz = 0;
-		tok->start = &p->map[p->i];
+	} else if ('-' == p->map[p->i] && p->i < p->len - 2 && 
+	           '-' == p->map[p->i + 1]) {
+		/*
+		 * Are we in a single-line comment?
+		 * If so, read only the current line.
+		 */
+		tok_nextchar(p, 2);
+		tok_init(tok, p);
 		while (p->i < p->len && '\n' != p->map[p->i])  {
-			p->i++;
-			p->col++;
+			tok_nextchar(p, 1);
 			tok->sz++;
 		}
 		if (p->i == p->len) {
@@ -197,24 +201,41 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 				dowarnx(p, "unexpected eof");
 			return(0);
 		}
-		p->i++;
-		p->col = 1;
-		p->line++;
+		tok_nextchar(p, 1);
 		tok->type = TOK_COMMENT;
 		return(1);
+	} else if (('"' == p->map[p->i] || '\'' == p->map[p->i]) && 
+		   p->i && '\\' != p->map[p->i - 1]) {
+		/*
+		 * Are we quoting?
+		 */
+		quot = p->map[p->i];
+		tok_nextchar(p, 1);
+		tok_init(tok, p);
+		while (p->i < p->len && quot != p->map[p->i] && 
+		       '\\' != p->map[p->i - 1]) {
+			tok_nextchar(p, 1);
+			tok->sz++;
+		}
+		if (p->i == p->len) {
+			tok->eof = 1;
+			if ( ! eofok)
+				dowarnx(p, "unexpected eof");
+			return(0);
+		}
+		tok_nextchar(p, 1);
+		tok->type = TOK_LITERAL;
+		return(1);
 	}
-	    
 
-	p->col++;
-	tok->start = &p->map[p->i++];
-	tok->sz = 1;
+	tok_init(tok, p);
+	tok_nextchar(p, 1);
+	tok->sz++;
 	tok->type = TOK_IDENT;
 
 	if ('(' == p->map[p->i - 1] ||
 	    ',' == p->map[p->i - 1] ||
 	    ')' == p->map[p->i - 1] ||
-	    '\'' == p->map[p->i - 1] ||
-	    '"' == p->map[p->i - 1] ||
 	    ';' == p->map[p->i - 1])
 		return(1);
 
@@ -222,13 +243,10 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 		if ('(' == p->map[p->i] ||
 		    ',' == p->map[p->i] ||
 		    ')' == p->map[p->i] ||
-		    '\'' == p->map[p->i] ||
-		    '"' == p->map[p->i] ||
 		    ';' == p->map[p->i])
 			break;
-		p->i++;
+		tok_nextchar(p, 1);
 		tok->sz++;
-		p->col++;
 	}
 
 	return(1);
@@ -238,6 +256,8 @@ static int
 tok_strsame(const struct token *tok, const char *str)
 {
 
+	if (0 == tok->sz)
+		return(0);
 	return(0 == strncasecmp(str, tok->start, tok->sz));
 }
 
@@ -262,6 +282,8 @@ tok_nextsame(struct token *tok, struct parse *p,
 		return(-1);
 	while (TOK_COMMENT == tok->type);
 
+	if (TOK_LITERAL == tok->type)
+		return(0);
 	return(tok_strsame(tok, str));
 }
 
