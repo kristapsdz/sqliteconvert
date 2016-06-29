@@ -417,7 +417,7 @@ static int
 schema_column(struct token *tok, struct parse *p, struct tab *tab)
 {
 	size_t	 	 nest;
-	struct col	*col;
+	struct col	*col, *ncol;
 	char		*comment;
 
 	if ( ! comment_append(tok, p, 0, &comment))
@@ -436,7 +436,13 @@ schema_column(struct token *tok, struct parse *p, struct tab *tab)
 		col->tab = tab;
 		col->idx = tab->ncol++;
 		col->comment = comment;
-		TAILQ_INSERT_TAIL(&tab->colq, col, entry);
+		TAILQ_FOREACH(ncol, &tab->colq, entry)
+			if (strcmp(ncol->name, col->name) > 0)
+				break;
+		if (NULL != ncol)
+			TAILQ_INSERT_BEFORE(ncol, col, entry);
+		else
+			TAILQ_INSERT_TAIL(&tab->colq, col, entry);
 		domsg(p, "added column: %s.%s", 
 			col->tab->name, col->name);
 	} else 
@@ -477,7 +483,7 @@ schema_table(struct token *tok, struct parse *p,
 	char **comment, unsigned int flags)
 {
 	int	 	 c;
-	struct tab	*tab;
+	struct tab	*tab, *ntab;
 
 	/* Start trying to get the table identifier. */
 
@@ -509,7 +515,15 @@ schema_table(struct token *tok, struct parse *p,
 	*comment = NULL;
 	tab->flags = flags;
 	TAILQ_INIT(&tab->colq);
-	TAILQ_INSERT_TAIL(&p->tabq, tab, entry);
+
+	TAILQ_FOREACH(ntab, &p->tabq, entry)
+		if (strcmp(ntab->name, tab->name) > 0)
+			break;
+	if (NULL != ntab)
+		TAILQ_INSERT_BEFORE(ntab, tab, entry);
+	else
+		TAILQ_INSERT_TAIL(&p->tabq, tab, entry);
+
 	domsg(p, "added table: %s", tab->name);
 
 	/* Parse through all of our columns. */
