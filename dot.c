@@ -60,13 +60,13 @@ output(struct parse *p)
 	TAILQ_FOREACH(tab, &p->tabq, entry) {
 		cp = sqlite_schema_id(tab->name, NULL);
 		printf("\ttable%zu [label=<"
-			"<TABLE HREF=\"#tab-%s\">\n",
+			"<TABLE HREF=\"#sql-%s\">\n",
 		       tab->idx, cp);
 		free(cp);
 		TAILQ_FOREACH(col, &tab->colq, entry) {
 			cp = sqlite_schema_id
 				(col->tab->name, col->name);
-			printf("\t\t\t<TR><TD HREF=\"#col-%s\" "
+			printf("\t\t\t<TR><TD HREF=\"#sql-%s\" "
 				"PORT=\"f%zu\">", cp, col->idx);
 			free(cp);
 			safe_putstring(col->name);

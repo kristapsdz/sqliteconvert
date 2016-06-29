@@ -69,6 +69,7 @@ __BEGIN_DECLS
 
 void	 sqlite_schema_free(struct parse *);
 char	*sqlite_schema_id(const char *, const char *);
+char	*sqlite_schema_idbuf(const char *, size_t);
 int	 sqlite_schema_parse(const char *, struct parse *);
 
 __END_DECLS

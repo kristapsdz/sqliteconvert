@@ -26,6 +26,25 @@
 #include "extern.h"
 
 char *
+sqlite_schema_idbuf(const char *cp, size_t psz)
+{
+	char	*p, *op;
+	size_t	 i;
+
+	if (NULL == (p = strndup(cp, psz)))
+		err(EXIT_FAILURE, "strndup");
+
+	for (op = p, i = 0; i < psz; i++) {
+		if (isalnum((int)p[i]) || '-' == p[i] ||
+		    '_' == p[i] || '.' == p[i])
+			continue;
+		p[i] = '_';
+	}
+
+	return(op);
+}
+
+char *
 sqlite_schema_id(const char *tab, const char *col)
 {
 	char	*p, *op;

@@ -26,11 +26,12 @@
 #include "extern.h"
 
 static void
-safe_putstring(const char *p)
+safe_putbuf(const char *p, size_t sz)
 {
+	size_t	 i;
 
-	for ( ; '\0' != *p; p++)
-		switch (*p) {
+	for (i = 0; i < sz; i++)
+		switch (p[i]) {
 		case ('<'):
 			fputs("&gt;", stdout);
 			break;
@@ -44,12 +45,72 @@ safe_putstring(const char *p)
 			fputs("&amp;", stdout);
 			break;
 		default:
+			if (isspace((int)p[i]))
+				putchar(' ');
+			else
+				putchar(p[i]);
+			break;
+		}
+}
+
+static void
+safe_putstring(const char *p)
+{
+
+	safe_putbuf(p, strlen(p));
+}
+
+static void
+putcomment(const char *p)
+{
+	const char	*op;
+	char		*cp;
+	size_t		 sz;
+
+	for (op = p; '\0' != *p; p++) {
+		switch (*p) {
+		case ('@'):
+			if (op == p || '\\' == p[-1]) {
+				putchar(*p);
+				continue;
+			}
+			break;
+		case ('<'):
+			fputs("&gt;", stdout);
+			continue;
+		case ('>'):
+			fputs("&lt;", stdout);
+			continue;
+		case ('"'):
+			fputs("&quot;", stdout);
+			continue;
+		case ('&'):
+			fputs("&amp;", stdout);
+			continue;
+		default:
 			if (isspace((int)*p))
 				putchar(' ');
 			else
 				putchar(*p);
-			break;
+			continue;
 		}
+		op = ++p;
+		sz = 0;
+		while ('\0' != *p && ! isspace((int)*p)) {
+			p++;
+			sz++;
+		}
+		p--;
+		if (0 == sz) {
+			putchar('@');
+			continue;
+		} 
+		cp = sqlite_schema_idbuf(op, sz);
+		printf("<a href=\"#sql-%s\">", cp);
+		free(cp);
+		safe_putbuf(op, sz);
+		fputs("</a>", stdout);
+	}
 }
 
 static void
@@ -62,7 +123,7 @@ output(struct parse *p)
 	puts("<dl class=\"tabs\">");
 	TAILQ_FOREACH(tab, &p->tabq, entry) {
 		cp = sqlite_schema_id(tab->name, NULL);
-		printf("\t<dt id=\"tab-%s\">", cp);
+		printf("\t<dt id=\"sql-%s\">", cp);
 		free(cp);
 		safe_putstring(tab->name);
 		puts("</dt>");
@@ -70,14 +131,14 @@ output(struct parse *p)
 		if (NULL != tab->comment) {
 			puts("\t\t<div class=\"comment\">");
 			fputs("\t\t\t", stdout);
-			safe_putstring(tab->comment);
+			putcomment(tab->comment);
 			puts("\n\t\t</div>");
 		}
 		puts("\t\t<dl class=\"cols\">");
 		TAILQ_FOREACH(col, &tab->colq, entry) {
 			cp = sqlite_schema_id
 				(col->tab->name, col->name);
-			printf("\t\t\t<dt id=\"col-%s\">", cp);
+			printf("\t\t\t<dt id=\"sql-%s\">", cp);
 			free(cp);
 			safe_putstring(col->name);
 			puts("</dt>");
@@ -85,7 +146,7 @@ output(struct parse *p)
 			if (NULL != col->comment) {
 				puts("\t\t\t\t<div class=\"comment\">");
 				fputs("\t\t\t\t\t", stdout);
-				safe_putstring(col->comment);
+				putcomment(col->comment);
 				puts("\n\t\t\t\t</div>");
 			}
 			puts("\t\t\t</dd>");

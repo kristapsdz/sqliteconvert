@@ -4,7 +4,7 @@ BINS	 = sqlite2dot sqlite2html
 MAN1S	 = sqlite2dot.1 sqlite2html.1
 OBJS	 = dot.o html.o id.o parser.o
 BINDIR	 = $(PREFIX)/bin
-MAN1DI	 = $(PREFIX)/man/man1
+MAN1DIR	 = $(PREFIX)/man/man1
 
 
 all: $(BINS)
