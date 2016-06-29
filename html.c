@@ -205,7 +205,6 @@ main(int argc, char *argv[])
 
 	memset(&opts, 0, sizeof(struct opts));
 	memset(&p, 0, sizeof(struct parse));
-	rc = 0;
 	opts.prefix = "sql";
 
 	while (-1 != (c = getopt(argc, argv, "v"))) 

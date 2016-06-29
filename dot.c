@@ -94,7 +94,6 @@ main(int argc, char *argv[])
 	struct parse	 p;
 
 	memset(&p, 0, sizeof(struct parse));
-	rc = 0;
 
 	while (-1 != (c = getopt(argc, argv, "v"))) 
 		switch (c) {

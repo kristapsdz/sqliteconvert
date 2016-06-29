@@ -361,6 +361,7 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 		if ( ! strncmp(tcol->name, tok->start, tok->sz))
 			break;
 
+	fkey = NULL;
 	if (NULL != tcol) {
 		fkey = calloc(1, sizeof(struct fkey));
 		if (NULL == fkey)
@@ -381,9 +382,11 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 		return(0);
 	while (TOK_COMMENT == tok->type);
 
-	fkey->rtab = strndup(tok->start, tok->sz);
-	if (NULL == fkey->rtab)
-		err(EXIT_FAILURE, "strndup");
+	if (NULL != fkey) {
+		fkey->rtab = strndup(tok->start, tok->sz);
+		if (NULL == fkey->rtab)
+			err(EXIT_FAILURE, "strndup");
+	}
 
 	if ( ! tok_nextexpect(tok, p, "("))
 		return(0);
@@ -393,9 +396,11 @@ schema_foreign(struct token *tok, struct parse *p, struct tab *tab)
 		return(0);
 	while (TOK_COMMENT == tok->type);
 
-	fkey->rcol = strndup(tok->start, tok->sz);
-	if (NULL == fkey->rcol)
-		err(EXIT_FAILURE, "strndup");
+	if (NULL != fkey) {
+		fkey->rcol = strndup(tok->start, tok->sz);
+		if (NULL == fkey->rcol)
+			err(EXIT_FAILURE, "strndup");
+	}
 
 	if (NULL != tcol)
 		domsg(p, "added foreign key to %s.%s: %s.%s",
