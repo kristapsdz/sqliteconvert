@@ -38,6 +38,6 @@ CREATE TABLE "tes't1" (
 CREATE TABLE test2 (
 	/* This column does something. */
 	bar INTEGER NOT NULL,
-	/* This is a primary key. */
+	/* This is a primary key. \\-character---and an \@-sign. */
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
 );

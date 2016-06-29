@@ -99,7 +99,12 @@ safe_putcomment(const struct opts *opts, const char *p)
 	size_t		 sz;
 
 	for (op = p; '\0' != *p; ) {
-		if (escaped_streq(op, p, "``")) {
+		if ('\\' == *p) {
+			if (op != p && '\\' == p[-1])
+				safe_putchar(*p);
+			p++;
+			continue;
+		} else if (escaped_streq(op, p, "``")) {
 			fputs("&#x201c;", stdout);
 			p += 2;
 			continue;
@@ -107,21 +112,19 @@ safe_putcomment(const struct opts *opts, const char *p)
 			fputs("&#x201d;", stdout);
 			p += 2;
 			continue;
-		} else if (escaped_streq(op, p, "--")) {
-			fputs("&#8211;", stdout);
-			p += 2;
-			continue;
 		} else if (escaped_streq(op, p, "---")) {
 			fputs("&#8212;", stdout);
 			p += 3;
 			continue;
-		} else if ('@' != *p) {
-			safe_putchar(*p++);
+		} else if (escaped_streq(op, p, "--")) {
+			fputs("&#8211;", stdout);
+			p += 2;
 			continue;
-		} else if (op == p || '\\' == p[-1]) {
+		} else if ( ! escaped_streq(op, p, "@")) {
 			safe_putchar(*p++);
 			continue;
 		}
+
 		/* We have a valid @-reference. */
 		op = ++p;
 		sz = 0;

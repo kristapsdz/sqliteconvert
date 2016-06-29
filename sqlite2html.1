@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: June 28 2016 $
+.Dd $Mdocdate: June 29 2016 $
 .Dt SQLITE2HTML 1
 .Os
 .Sh NAME
@@ -67,7 +67,26 @@ If this identifier is not followed by white-space, you may quote the
 identifier to prevent subsequent characters from being pulled into the
 identifier, e.g.,
 .Li @"foo.bar" .
+If you wish to print a standalone
+.Li @ ,
+you may escape it with a backslash
+.Pq Dq \e .
 .Pp
+The following sequences are also special:
+.Bl -tag -width Ds
+.It Li --
+Print an formatted n-dash.
+.It Li ---
+Print an formatted m-dash.
+.It Li ``
+Print formatted left-double quotes.
+.It Li ''
+Print formatted right-double quotes.
+.El
+.Pp
+Any of these may be escaped with the backslash to have it print as-is.
+If you wish to print a backslash, you must escape it, for example,
+.Li the \e\e-character---and an \e@-sign .
 .Sh SEE ALSO
 .Xr sqlite2dot 1 ,
 .Xr sqlite3 1
