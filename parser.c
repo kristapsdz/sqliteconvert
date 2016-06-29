@@ -728,30 +728,90 @@ sqlite_schema_free(struct parse *p)
 }
 
 int
-sqlite_schema_parse(const char *fname, struct parse *p) 
+sqlite_schema_parsefile(const char *fname, struct parse *p) 
 {
-	int	 	 rc, c, fd;
-	void		*map;
-	struct stat	 st;
-	struct token	 tok;
-	char		*comment;
-
-	/* Open the file in read-only mode and map it. */
+	int	 	 fd, rc;
 
 	if (-1 == (fd = open(fname, O_RDONLY, 0))) {
 		warn("%s", fname);
 		return(0);
-	} else if (-1 == fstat(fd, &st)) {
+	}
+
+	rc = sqlite_schema_parsefd(fname, fd, p);
+	if (-1 == close(fd)) {
 		warn("%s", fname);
-		close(fd);
+		rc = 0;
+	}
+
+	return(rc);
+}
+
+int
+sqlite_schema_parsefd(const char *fname, int fd, struct parse *p) 
+{
+	int	 	 rc;
+	void		*map;
+	struct stat	 st;
+
+	if (-1 == fstat(fd, &st)) {
+		warn("%s", fname);
 		return(0);
 	} 
 	
 	map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-
 	if (MAP_FAILED == map) {
 		warn("%s", fname);
-		close(fd);
+		return(0);
+	}
+
+	rc = sqlite_schema_parsebuf(fname, map, st.st_size, p);
+	if (-1 == munmap(map, st.st_size)) {
+		warn("%s", fname);
+		rc = 0;
+	}
+
+	return(rc);
+}
+
+int
+sqlite_schema_parsestdin(struct parse *p) 
+{
+	char	 sbuf[BUFSIZ];
+	char	*buf;
+	size_t	 bufsz;
+	ssize_t	 ssz;
+	int	 rc;
+
+	for (rc = 0, buf = NULL, bufsz = 0; ; bufsz += ssz) {
+		ssz = read(STDIN_FILENO, sbuf, sizeof(sbuf));
+		if (ssz < 0) {
+			warn("<stdin>");
+			break;
+		} else if (0 == ssz) {
+			rc = sqlite_schema_parsebuf
+				("<stdin>", buf, bufsz, p);
+			break;
+		}
+		buf = realloc(buf, bufsz + ssz);
+		if (NULL == buf)
+			err(EXIT_FAILURE, "realloc");
+		memcpy(buf + bufsz, sbuf, ssz);
+	}
+
+	free(buf);
+	return(rc);
+}
+
+int
+sqlite_schema_parsebuf(const char *fname, 
+	const char *map, size_t mapsz, struct parse *p) 
+{
+	int	 	 rc, c;
+	struct token	 tok;
+	char		*comment;
+
+	if (0 == mapsz) {
+		warnx("%s: empty file", fname);
 		return(0);
 	}
 
@@ -761,7 +821,7 @@ sqlite_schema_parse(const char *fname, struct parse *p)
 	TAILQ_INIT(&p->fkeyq);
 	p->map = map;
 	p->i = p->line = p->col = p->ntab = 0;
-	p->len = st.st_size;
+	p->len = mapsz;
 	p->fname = fname;
 	
 	/*
@@ -800,8 +860,6 @@ sqlite_schema_parse(const char *fname, struct parse *p)
 	}
 
 	free(comment);
-	munmap(map, st.st_size);
-	close(fd);
 
 	/* On success, compute foreign keys. */
 

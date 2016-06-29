@@ -107,10 +107,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (1 != argc)
-		goto usage;
+	if (0 == argc)
+		rc = sqlite_schema_parsestdin(&p);
+	else 
+		rc = sqlite_schema_parsefile(argv[0], &p);
 
-	if ((rc = sqlite_schema_parse(argv[0], &p)) > 0)
+	if (rc > 0)
 		output(&p);
 
 	sqlite_schema_free(&p);
