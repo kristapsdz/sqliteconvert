@@ -17,18 +17,23 @@
 
 PRAGMA journal_mode=WAL;
 
-/* This table has its comments in here. */
-/* It references @test2 and @"test2". */
+-- sqliteconvert is a set of tools to extract documentation from SQLite
+-- database schemas. Documentation, in this regard, consists of the
+-- schema itself and comments prior to each table and comment.  What
+-- you're reading right now is part of the comment above the table
+-- called test't1.  (The funny name is demonstrate table names from
+-- literals.)
+/* This table references @test2 and @"test2". */
 CREATE TABLE "tes't1" (
+	-- To see the original SQL file, click on the ``SQL'' link in
+	-- the header of this file.
+	foo INTEGER NOT NULL,
 	/* This is a foreign key. */
 	-- By the way, here I have some ``fancy quotes''.
 	test2id INTEGER NOT NULL,
-	/* This is a unique value. */
-	foo INTEGER NOT NULL,
-	-- Some sort of comment.
-	baz INTEGER NOT NULL,
-	-- A primary key. 
-	-- This is multiple lines long.
+	-- Some sort of comment---with a nice em-dash there.
+	moo INTEGER NOT NULL,
+	-- To see the source code, click on the GitHub icon.
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	/* Note our foreign key... */
 	FOREIGN KEY (test2id) REFERENCES test2(id),
@@ -38,10 +43,13 @@ CREATE TABLE "tes't1" (
 
 -- This other table has its comments in here.
 -- It is also multi-line.
+-- It's just used to flesh out the example.
 CREATE TABLE test2 (
-	/* This column does something. */
-	bar INTEGER NOT NULL REFERENCES "tes't1"(baz),
-	/* This is a primary key. \\-character---and an \@-sign. */
+	-- This column references another table and column.
+	-- You can also use foreign key constraints.
+	bar INTEGER NOT NULL REFERENCES "tes't1"(foo),
+	-- This is a primary key and shows escaping of special
+	-- characters, for example, \\-character---and an \@-sign.
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
 );
 

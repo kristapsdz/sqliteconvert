@@ -30,7 +30,8 @@ h1				{ font-family: "Playfair Display", serif;
 .comment			{ font-style: italic; 
 				  padding: 0 6pt; }
 .foreign			{ padding: 0 6pt; }
-a				{ text-decoration: none; }
+a				{ text-decoration: none; 
+				  color: blue; }
 dd				{ margin: 0; }
 .tabs				{ margin-top: 0; }
 .tabs .cols .foreign:before	{ content: 'Foreign key reference: '; 
