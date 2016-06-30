@@ -26,6 +26,7 @@
 .Sh SYNOPSIS
 .Nm sqlite2html
 .Op Fl v
+.Op Fl p Ar prefix
 .Op Ar schema
 .Sh DESCRIPTION
 The
@@ -33,9 +34,14 @@ The
 utility converts an
 .Xr sqlite3 1
 schema file to an HTML5 fragment.
-Its only argument is
-.Fl v ,
-which causes the parser to emit informational messages on stderr.
+Its options are as follows:
+.Bl -tag -width Ds
+.It Fl v
+Causes the parser to emit informational messages on stderr.
+.It Fl p Ar prefix
+Prefix to use for creating HTML ID tags.
+.It Ar schema
+An SQLite schema file.
 .Pp
 The outputted HTML5 fragment consists of a
 .Li <dl class="tabs">

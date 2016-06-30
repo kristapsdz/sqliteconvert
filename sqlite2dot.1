@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: June 28 2016 $
+.Dd $Mdocdate: June 29 2016 $
 .Dt SQLITE2DOT 1
 .Os
 .Sh NAME
@@ -26,6 +26,10 @@
 .Sh SYNOPSIS
 .Nm sqlite2dot
 .Op Fl v
+.Op Fl c Ar attrs
+.Op Fl h Ar attrs
+.Op Fl p Ar prefix
+.Op Fl t Ar attrs
 .Op Ar schema
 .Sh DESCRIPTION
 The
@@ -34,9 +38,35 @@ utility converts an
 .Xr sqlite3 1
 schema file to a GraphViz file readable by
 .Xr dot 1 .
-Its only argument is
-.Fl v ,
-which emits informational messages to standard error.
+Its arguments are as follows:
+.Bl -tag -width Ds
+.It Fl v
+Emits informational messages to standard error.
+.It Fl c Ar attrs
+Table-cell attributes.
+See the GraphViz documentation for HTML labels for a list of cell
+attributes (except
+.Dq href ) .
+You should invoke this once per attribute (they will accumulate).
+.It Fl h Ar attrs
+First table-cell (header) attributes.
+If unset, this will use
+.Fl c .
+See the GraphViz documentation for HTML labels for a list of cell
+attributes (except
+.Dq href ) .
+You should invoke this once per attribute (they will accumulate).
+.It Fl p Ar prefix
+Prefix to use for creating HTML ID tags.
+.It Fl t Ar attrs
+Table attributes.
+See the GraphViz documentation for HTML labels for a list of cell
+attributes (except
+.Dq href ) .
+You should invoke this once per attribute (they will accumulate).
+.It Ar schema
+An SQLite schema file.
+.El
 .Pp
 The outputted GraphViz file serialises tables as HTML-label nodes, each
 of which has one row per table column.

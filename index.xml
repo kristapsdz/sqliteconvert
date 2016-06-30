@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" /> 
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<title>Test of Image Map</title>
+		<link href="https://fonts.googleapis.com/css?family=Alegreya+Sans:300,300italic,600" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css?family=Playfair+Display:400,400italic" rel="stylesheet" />
+		<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+		<link href="index.css" rel="stylesheet" />
+		<script src="imageMapResizer.min.js"></script>
+	</head>
+	<body>
+		<header>
+			<h1>
+				This is a demo of sqliteconvert.
+			</h1>
+			<nav>
+				<a href="https://github.com/kristapsdz/sqliteconvert"><i class="fa fa-github"></i></a>
+				View: <a href="test.sql.html">SQL</a> (<a href="test.sql">raw</a>),
+				<a href="sqlite2dot.1.html">sqlite2dot(1)</a>,
+				<a href="sqlite2html.1.html">sqlite2html(1)</a>.
+			</nav>
+			<div>
+				(Click anywhere on the lefthand image.)
+			</div>
+		</header>
+		<article>
+			<div class="browser">
+				<section class="browseimg">
+					<img src="test.png" usemap="#G" />
+				</section>
+				<section class="browseeml">
+					<!-- @SCHEMA@ -->
+				</section>
+			</div>
+		</article>
+		<footer>
+			&copy; 2016, <a href="https://kristaps.bsd.lv">Kristaps Dzonsons</a>
+		</footer>
+		<script>
+			imageMapResize();
+		</script>
+	</body>
+</html>

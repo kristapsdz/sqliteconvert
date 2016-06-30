@@ -50,27 +50,37 @@ safe_putstring(const char *p)
 }
 
 static void
-output(struct parse *p)
+output(struct parse *p, const char *prefix, const char *topts, 
+	const char *fopts, const char *ropts)
 {
 	struct tab	*tab;
 	struct col	*col;
 	char		*cp;
 
+	if (NULL == fopts)
+		fopts = ropts;
+
 	puts("digraph G {");
 	TAILQ_FOREACH(tab, &p->tabq, entry) {
+		printf("\ttable%zu [shape=none; label=<"
+			"<TABLE%s%s>\n",
+		       tab->idx, NULL == topts ? "" : " ",
+		       NULL == topts ? "" : topts);
 		cp = sqlite_schema_id(tab->name, NULL);
-		printf("\ttable%zu [label=<"
-			"<TABLE HREF=\"#sql-%s\">\n",
-		       tab->idx, cp);
-		printf("\t\t\t<TR><TD HREF=\"#sql-%s\">", cp);
+		printf("\t\t\t<TR><TD %s%sHREF=\"#%s-%s\">", 
+			NULL == fopts ? "" : fopts,
+			NULL == fopts ? "" : " ", prefix, cp);
+		free(cp);
 		safe_putstring(tab->name);
 		puts("</TD></TR>");
-		free(cp);
 		TAILQ_FOREACH(col, &tab->colq, entry) {
 			cp = sqlite_schema_id
 				(col->tab->name, col->name);
-			printf("\t\t\t<TR><TD HREF=\"#sql-%s\" "
-				"PORT=\"f%zu\">", cp, col->idx);
+			printf("\t\t\t<TR><TD %s%sHREF=\"#%s-%s\" "
+				"PORT=\"f%zu\">", 
+				NULL == ropts ? "" : ropts,
+				NULL == ropts ? "" : " ",
+				prefix, cp, col->idx);
 			free(cp);
 			safe_putstring(col->name);
 			puts("</TD></TR>");
@@ -87,16 +97,57 @@ output(struct parse *p)
 	puts("}");
 }
 
+static int
+append(char **val, const char *cp)
+{
+	size_t	 sz, tsz;
+
+	if (0 == strncasecmp(cp, "href=", 5))
+		return(0);
+
+	if (NULL != *val) {
+		sz = strlen(*val);
+		tsz = sz + strlen(cp) + 2;
+		if (NULL == (*val = realloc(*val, tsz)))
+			err(EXIT_FAILURE, "realloc");
+		strlcat(*val, " ", tsz);
+		strlcat(*val, cp, tsz);
+	} else
+		if (NULL == (*val = strdup(cp)))
+			err(EXIT_FAILURE, "strdup");
+
+	return(1);
+}
+
 int
 main(int argc, char *argv[])
 {
 	int	 	 rc, c;
+	char		*topts, *fopts, *ropts;
 	struct parse	 p;
+	const char	*prefix;
 
 	memset(&p, 0, sizeof(struct parse));
+	topts = ropts = fopts = NULL;
+	prefix = "sql";
 
-	while (-1 != (c = getopt(argc, argv, "v"))) 
+	while (-1 != (c = getopt(argc, argv, "h:c:t:p:v"))) 
 		switch (c) {
+		case ('p'):
+			prefix = optarg;
+			break;
+		case ('t'):
+			if ( ! append(&topts, optarg))
+				warnx("-%c %s: ignoring", c, optarg);
+			break;
+		case ('h'):
+			if ( ! append(&fopts, optarg)) 
+				warnx("-%c %s: ignoring", c, optarg);
+			break;
+		case ('c'):
+			if ( ! append(&ropts, optarg))
+				warnx("-%c %s: ignoring", c, optarg);
+			break;
 		case ('v'):
 			p.verbose = 1;
 			break;
@@ -113,12 +164,16 @@ main(int argc, char *argv[])
 		rc = sqlite_schema_parsefile(argv[0], &p);
 
 	if (rc > 0)
-		output(&p);
+		output(&p, prefix, topts, fopts, ropts);
 
 	sqlite_schema_free(&p);
 	return(rc ? EXIT_SUCCESS : EXIT_FAILURE);
 
 usage:
-	fprintf(stderr, "usage: %s [-v] file\n", getprogname());
+	fprintf(stderr, "usage: %s [-v] "
+		"[-c attrs] "
+		"[-h attrs] "
+		"[-t attrs] "
+		"file\n", getprogname());
 	return(EXIT_FAILURE);
 }
