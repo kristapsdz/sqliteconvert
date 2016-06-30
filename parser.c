@@ -487,8 +487,10 @@ schema_column(struct token *tok, struct parse *p, struct tab *tab)
 			TAILQ_INSERT_TAIL(&tab->colq, col, entry);
 		domsg(p, "added column: %s.%s", 
 			col->tab->name, col->name);
-	} else 
+	} else {
 		free(comment);
+		col = NULL;
+	}
 
 	if (tok_strsame(tok, "foreign"))
 		if ( ! schema_foreign(tok, p, tab))
