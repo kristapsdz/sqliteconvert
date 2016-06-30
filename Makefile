@@ -12,10 +12,11 @@ DOTFLAGS	 = -h "BGCOLOR=\"red\"" \
 		   -t "CELLSPACING=\"0\""
 WWWPREFIX	 = /var/www/vhosts/kristaps.bsd.lv/htdocs/sqliteconvert
 HTMLS		 = index.html test.sql.html sqlite2dot.1.html sqlite2html.1.html
+BUILT		 = imageMapResizer.min.js index.css mandoc.css test.sql
 
 all: $(BINS)
 
-www: $(HTMLS)
+www: $(HTMLS) test.png
 
 sqlite2dot: dot.o id.o parser.o
 	$(CC) -o $@ dot.o id.o parser.o
@@ -31,7 +32,7 @@ install: all
 
 installwww: www
 	mkdir -p $(WWWPREFIX)
-	install -m 0444 $(HTMLS) index.css test.sql test.png imageMapResizer.min.js $(WWWPREFIX)
+	install -m 0444 $(HTMLS) $(BUILT) test.png $(WWWPREFIX)
 
 dot.o html.o id.o parser.o: extern.h
 
