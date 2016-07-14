@@ -27,8 +27,7 @@ h1				{ font-family: "Playfair Display", serif;
 				  left: 50%;
 				  top: 0;
 				  height: 100%; }
-.comment			{ font-style: italic; 
-				  padding: 0 6pt; }
+.comment			{ padding: 0 6pt; }
 .foreign			{ padding: 0 6pt; }
 a				{ text-decoration: none; 
 				  color: blue; }
@@ -43,7 +42,7 @@ dt, dd				{ padding: 6pt; }
 .cols > dd			{ padding-top: 0; }
 .cols > dt			{ padding-bottom: 0; }
 dt, dt + dd			{ transition: background-color 0.5s linear, color 0.5s linear; 
-				  color: #888; }
+				  color: #555; }
 dt				{ border-top-left-radius: 6pt; 
 				  border-top-right-radius: 6pt; }
 dt + dd				{ border-bottom-left-radius: 6pt; 
@@ -51,7 +50,7 @@ dt + dd				{ border-bottom-left-radius: 6pt;
 dt:target, dt:target + dd	{ background-color: #ddd;
 				  color: #000; }
 dt:target + dd dt, 
-dt:target + dd dt + dd		{ color: #444; }
+dt:target + dd dt + dd		{ color: #333; }
 footer				{ text-align: center;
 				  font-size: smaller;
 				  padding: 12pt; }

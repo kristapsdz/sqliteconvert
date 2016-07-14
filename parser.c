@@ -144,6 +144,7 @@ static int
 tok_next(struct token *tok, struct parse *p, int eofok)
 {
 	int	 quot;
+	size_t	 nws, save;
 
 	memset(tok, 0, sizeof(struct token));
 	tok->type = TOK_EOF;
@@ -165,14 +166,51 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 		 * Suck down everything but the leading white-space.
 		 */
 		tok_nextchar(p, 2);
-		tok_skipws(p);
 		tok_init(tok, p);
 		while (p->i < p->len - 2) {
 			if ('*' == p->map[p->i] &&
 			    '/' == p->map[p->i + 1])
 				break;
-			tok_nextchar(p, 1);
-			tok->sz++;
+			/*
+			 * Like in this comment, we may have a leading
+			 * asterisk on the line.
+			 * Skip past those asterisks.
+			 * Retain newline status in certain situations:
+			 * double-blank line (free-form comments) or
+			 * newline following the asterisk.
+			 */
+			if ('\n' == p->map[p->i]) {
+				save = p->i;
+				tok_nextchar(p, 1);
+				tok->sz++;
+				p->map[save] = ' ';
+				/* Double-newline. */
+				if (p->i < p->len &&
+				   '\n' == p->map[p->i])
+					p->map[save] = '\n';
+				/* Read after all whitespace. */
+				while (p->i < p->len && 
+				       isspace((int)p->map[p->i])) {
+					save = p->i;
+					tok_nextchar(p, 1);
+					tok->sz++;
+					p->map[save] = ' ';
+				}
+				/* Blank after newline-asterisk. */
+				if (p->i < p->len - 1 && 
+				    '*' == p->map[p->i] &&
+				    '/' != p->map[p->i + 1]) {
+					save = p->i;
+					tok_nextchar(p, 1);
+					tok->sz++;
+					p->map[save] = ' ';
+					if ('\n' == p->map[p->i])
+						p->map[save] = '\n';
+				}
+			} else {
+				tok_nextchar(p, 1);
+				tok->sz++;
+			}
 		}
 		if (p->i == p->len - 2) {
 			tok->eof = 1;
@@ -188,10 +226,15 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 		/*
 		 * Are we in a single-line comment?
 		 * If so, read only the current line.
+		 * Catch whether we're only whitespace, which is going
+		 * to signify a paragraph break.
 		 */
 		tok_nextchar(p, 2);
 		tok_init(tok, p);
+		nws = 0;
 		while (p->i < p->len && '\n' != p->map[p->i])  {
+			if ( ! isspace((int)p->map[p->i]))
+				nws++;
 			tok_nextchar(p, 1);
 			tok->sz++;
 		}
@@ -200,7 +243,9 @@ tok_next(struct token *tok, struct parse *p, int eofok)
 			if ( ! eofok)
 				dowarnx(p, "unexpected eof");
 			return(0);
-		}
+		} 
+		if (0 == nws)
+			tok->sz++;
 		tok_nextchar(p, 1);
 		tok->type = TOK_COMMENT;
 		return(1);
@@ -309,6 +354,7 @@ comment_append(struct token *tok, struct parse *p,
 	char	*comment;
 	size_t	 sz;
 
+	*outp = NULL;
 	comment = NULL;
 	sz = 0;
 
@@ -821,7 +867,11 @@ sqlite_schema_parsebuf(const char *fname,
 
 	TAILQ_INIT(&p->tabq);
 	TAILQ_INIT(&p->fkeyq);
-	p->map = map;
+	if (NULL == (p->map = malloc(mapsz))) {
+		warn("malloc");
+		return(0);
+	}
+	memcpy(p->map, map, mapsz);
 	p->i = p->line = p->col = p->ntab = 0;
 	p->len = mapsz;
 	p->fname = fname;
@@ -868,5 +918,6 @@ sqlite_schema_parsebuf(const char *fname,
 	if (1 == rc)
 		foreign_keys(p);
 
+	free(p->map);
 	return(rc);
 }

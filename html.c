@@ -94,15 +94,19 @@ escaped_streq(const char *op, const char *p, const char *str)
 static void
 safe_putcomment(const struct opts *opts, const char *p)
 {
-	const char	*op;
+	const char	*op, *link;
 	char		*cp;
-	size_t		 sz;
+	size_t		 sz, linksz;
 
 	for (op = p; '\0' != *p; ) {
 		if ('\\' == *p) {
 			if (op != p && '\\' == p[-1])
 				safe_putchar(*p);
 			p++;
+			continue;
+		} else if (escaped_streq(op, p, "\n")) {
+			fputs("<p></p>", stdout);
+			p += 1;
 			continue;
 		} else if (escaped_streq(op, p, "``")) {
 			fputs("&#x201c;", stdout);
@@ -120,15 +124,42 @@ safe_putcomment(const struct opts *opts, const char *p)
 			fputs("&#8211;", stdout);
 			p += 2;
 			continue;
-		} else if ( ! escaped_streq(op, p, "@")) {
+		} 
+		
+		/* 
+		 * Now we catch our links: '@' for an in-document
+		 * reference and '[' (Markdown style) for a general
+		 * reference.
+		 */
+
+		if ( ! escaped_streq(op, p, "@") &&
+		     ! escaped_streq(op, p, "[")) {
 			safe_putchar(*p++);
 			continue;
 		}
 
-		/* We have a valid @-reference. */
-		op = ++p;
-		sz = 0;
-		if ('"' == *p) {
+		link = op = NULL;
+
+		if ('[' == *p)
+			link = ++p;
+		else
+			op = ++p;
+
+		sz = linksz = 0;
+
+		if (NULL != link) {
+			for ( ; '\0' != *p && ']' != *p; p++)
+				linksz++;
+			if ('\0' != *p)
+				p++;
+			if ('(' == *p) {
+				op = ++p;
+				for ( ; '\0' != *p && ')' != *p; p++)
+					sz++;
+				if ('\0' != *p)
+					p++;
+			}
+		} else if ('"' == *p) {
 			/* Quote-escaped @-reference. */
 			for (op = ++p; '\0' != *p && '"' != *p; p++)
 				sz++;
@@ -142,14 +173,24 @@ safe_putcomment(const struct opts *opts, const char *p)
 				else
 					sz++;
 
-		if (0 == sz) {
+		if ((NULL != link && 0 == linksz) || 
+		    (NULL == link && 0 == sz)) {
 			putchar('@');
 			continue;
 		} 
-		cp = sqlite_schema_idbuf(op, sz);
-		printf("<a href=\"#%s-%s\">", opts->prefix, cp);
-		free(cp);
-		safe_putbuf(op, sz);
+
+		if (NULL != link) {
+			if (NULL != op)
+				printf("<a href=\"%.*s\">", (int)sz, op);
+			else
+				printf("<a href=\"%.*s\">", (int)linksz, link);
+			safe_putbuf(link, linksz);
+		} else {
+			cp = sqlite_schema_idbuf(op, sz);
+			printf("<a href=\"#%s-%s\">", opts->prefix, cp);
+			free(cp);
+			safe_putbuf(op, sz);
+		}
 		fputs("</a>", stdout);
 	}
 }

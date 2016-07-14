@@ -17,7 +17,8 @@
 
 PRAGMA journal_mode=WAL;
 
--- sqliteconvert is a set of tools to extract documentation from SQLite
+-- sqliteconvert is a set of tools to extract documentation from
+-- [SQLite](https://www.sqlite.org)
 -- database schemas. Documentation, in this regard, consists of the
 -- schema itself and comments prior to each table and comment.  What
 -- you're reading right now is part of the comment above the table
@@ -27,32 +28,59 @@ PRAGMA journal_mode=WAL;
 -- image map linking the two.
 -- All of these are contained on this page.
 CREATE TABLE "INTRODUCTION" (
-	-- To see the original SQL file, click on the ``SQL'' link in
-	-- the header of this file.
-	tools INTEGER NOT NULL,
-	/* This is a foreign key. */
-	-- By the way, here I have some ``fancy quotes''.
-	test2id INTEGER NOT NULL,
-	-- Some sort of comment---with a nice em-dash there.
-	moo INTEGER NOT NULL,
-	-- To see the source code, click on the GitHub icon.
-	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	-- The tools generating this page are
+	-- [sqliteconvert(1)](sqliteconvert.1.html), 
+	-- [sqlite2dot(1)](sqlite2dot.1.html), and
+	-- [sqlite2html(1)](sqlite2html.1.html).
+	-- The first, [sqliteconvert(1)](sqliteconvert.1.html), is
+	-- simply a shell script that pulls together the latter two.
+	"1. Tools" INTEGER NOT NULL,
+	-- The file generating this text is [test.sql.html].
+	-- You can see how I generate the links (Markdown-style) from
+	-- the comments.
+	"2. Input" INTEGER NOT NULL,
+	-- To see the source code, head to
+	-- [github.com/kristapsdz/sqliteconvert](https://github.com/kristapsdz/sqliteconvert)
+	-- and check it out yourself.
+	-- It consists of the (minimal) SQLite parser and its output
+	-- modes.
+	"3. Source Code" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	-- To see a larger example, visit [schema.html].
+	-- This is created from the
+	-- [Gamelab](http://www.kcons.eu/gamelab) schema by using the
+	-- default 
+	-- [sqliteconvert(1)](sqliteconvert.1.html) invocation.
+	"4. Larger Example" TEXT,
 	/* Note our foreign key... */
-	FOREIGN KEY (test2id) REFERENCES test2(id),
+	FOREIGN KEY ("2. Input") REFERENCES "SYNTAX"("1. Comments"),
 	-- This should be discarded.
-	unique (tools)
+	unique ("1. Tools")
 );
 
--- This other table has its comments in here.
--- It is also multi-line.
--- It's just used to flesh out the example.
-CREATE TABLE test2 (
-	-- This column references another table and column.
-	-- You can also use foreign key constraints.
-	bar INTEGER NOT NULL REFERENCES "INTRODUCTION"(tools),
-	-- This is a primary key and shows escaping of special
-	-- characters, for example, \\-character---and an \@-sign.
-	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
+/*
+ * In this ``table'', I show how to document your SQLite schema so that
+ * it shows up nicely---just like this here.
+ * You can read about it in detail in
+ * [sqlite2html(1)](sqlite2html.1.html).
+
+ * On the other hand, you can just infer all this from [test.sql.html].
+ */
+CREATE TABLE SYNTAX (
+	-- The comments themselves can be in SQLite single-line format
+	-- (two dashes), multi-line (slash-asterisk until another
+	-- slash-asterisk), or fancy multi-line (slash-asterisk until
+	-- another slash-asterisk, but ignoring ``*'' at the start of
+	-- individual lines).
+	"1. Comments" INTEGER NOT NULL,
+	-- sqliteconvert recognises ``CREATE TABLE'' statements and the
+	-- columns described by that, including foreign key references
+	-- and unique constraints.
+	-- At this time, the unique constraints are not used in any way.
+	"2. Schema" REAL NOT NULL,
+	-- Beyond the schema itself and the comments, you can have
+	-- generic links and link to tables/columns.
+ 	-- Quotes and dashes are also nice-ified.
+	"3. Specials" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
 );
 
 -- Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam
@@ -65,7 +93,7 @@ CREATE TABLE test2 (
 -- blandit praesent luptatum zzril delenit augue duis dolore te feugait
 -- nulla facilisi.
 
-CREATE TABLE test3 (
+CREATE TABLE Lorem (
 	-- Nam liber tempor cum soluta nobis eleifend option congue
 	-- nihil imperdiet doming id quod mazim placerat facer possim
 	-- assum. Typi non habent claritatem insitam; est usus legentis
@@ -73,7 +101,7 @@ CREATE TABLE test3 (
 	col1 TEXT NOT NULL,
 	-- Investigationes demonstraverunt lectores legere me lius quod
 	-- ii legunt saepius.
-	col2 TEXT NOT NULL REFERENCES test2(bar),
+	col2 TEXT NOT NULL REFERENCES SYNTAX("1. Comments"),
 	-- Claritas est etiam processus dynamicus, qui sequitur
 	-- mutationem consuetudium lectorum. Mirum est notare quam
 	-- littera gothica, quam nunc putamus parum claram, anteposuerit

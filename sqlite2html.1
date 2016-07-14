@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: June 29 2016 $
+.Dd $Mdocdate: June 30 2016 $
 .Dt SQLITE2HTML 1
 .Os
 .Sh NAME
@@ -81,6 +81,22 @@ If you wish to print a standalone
 you may escape it with a backslash
 .Pq Dq \e .
 .Pp
+The
+.Li [
+character is similar, as it encloses general-purpose links in a manner
+similar to Markdown.
+Links are formatted as follows:
+.Bl -item
+.It
+.Li [link text](http://link)
+.It
+.Li [http://link]
+.El
+.Pp
+You can escape the
+.Li [
+character as well, to prevent this behaviour.
+.Pp
 The following sequences are also special:
 .Bl -tag -width Ds
 .It Li --
@@ -96,6 +112,24 @@ Print formatted right-double quotes.
 Any of these may be escaped with the backslash to have it print as-is.
 If you wish to print a backslash, you must escape it, for example,
 .Li the \e\e-character---and an \e@-sign .
+.Pp
+Lastly, a blank (without any white-space but the newline!) one-line
+comment line is considered to be a paragraph break, for example:
+.Bd -literal
+-- Hello, world.
+--
+-- And after the break...
+.Ed
+.Pp
+In multi-line comment, this can be affected with a blank line in the
+comment stream:
+.Bd -literal
+/* 
+ * Hello, world.
+ *
+ * That was another line break.
+ */
+.Ed
 .Sh SEE ALSO
 .Xr sqlite2dot 1 ,
 .Xr sqlite3 1

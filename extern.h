@@ -53,7 +53,7 @@ struct	fkey {
 TAILQ_HEAD(fkeyq, fkey);
 
 struct	parse {
-	const char	*map;
+	char		*map;
 	size_t		 i;
 	size_t		 len;
 	size_t		 line;
