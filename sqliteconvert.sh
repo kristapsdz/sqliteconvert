@@ -1,6 +1,6 @@
 #! /bin/sh
 
-TEMPLATE="@PREFIX@/schema.xml"
+TEMPLATE="@SHAREDIR@/schema.xml"
 ARGS=`getopt if: $*`
 INPUT=
 IMAGE=
@@ -41,9 +41,9 @@ set -e
 if [ -z "$IMAGE" ]
 then
 	sed -n '1,/@SCHEMA@/p' "$TEMPLATE"
-	./sqlite2html "$INPUT"
-	./sqlite2dot $DOTFLAGS "$INPUT" | dot -Tcmapx
+	sqlite2html "$INPUT"
+	sqlite2dot $DOTFLAGS "$INPUT" | dot -Tcmapx
 	sed -n '/@SCHEMA@/,$p' "$TEMPLATE"
 else
-	./sqlite2dot $DOTFLAGS "$INPUT" | dot -Tpng 
+	sqlite2dot $DOTFLAGS "$INPUT" | dot -Tpng 
 fi

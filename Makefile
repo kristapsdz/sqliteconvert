@@ -13,7 +13,7 @@ HTMLS		 = index.html test.sql.html sqlite2dot.1.html sqlite2html.1.html sqliteco
 PNGS		 = test.png schema.png
 BUILT		 = imageMapResizer.min.js index.css mandoc.css test.sql
 
-all: $(BINS) sqliteconvert.1
+all: $(BINS) $(MAN1S)
 
 www: $(HTMLS) $(PNGS)
 
@@ -26,8 +26,10 @@ sqlite2html: html.o id.o parser.o
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	mkdir -p $(DESTDIR)$(MAN1DIR)
+	mkdir -p $(DESTDIR)$(SHAREDIR)
 	install -m 0555 $(BINS) $(DESTDIR)$(BINDIR)
 	install -m 0444 $(MAN1S) $(DESTDIR)$(MAN1DIR)
+	install -m 0444 schema.xml $(DESTDIR)$(SHAREDIR)
 
 installwww: www
 	mkdir -p $(WWWPREFIX)
@@ -48,7 +50,7 @@ test.sql.html: test.sql
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@
 
 schema.html: schema.sql schema.xml sqliteconvert
-	sh sqliteconvert -f schema.xml schema.sql >$@
+	sh sqliteconvert schema.sql >$@
 
 schema.png: schema.sql schema.xml sqliteconvert
 	sh sqliteconvert -i schema.sql >$@

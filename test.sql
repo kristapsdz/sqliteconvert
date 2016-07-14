@@ -19,14 +19,18 @@ PRAGMA journal_mode=WAL;
 
 -- sqliteconvert is a set of tools to extract documentation from
 -- [SQLite](https://www.sqlite.org)
--- database schemas. Documentation, in this regard, consists of the
--- schema itself and comments prior to each table and comment.  What
--- you're reading right now is part of the comment above the table
+-- database schemas. 
+--
+-- Documentation, in this regard, consists of the schema itself and
+-- comments prior to each table and comment.
+-- What you're reading right now is part of the comment above the table
 -- called ``INTRODUCTION''.
 -- The result of this extraction is this HTML5 page.
 -- It consists of an image showing the schema, the documentation, and an
 -- image map linking the two.
--- All of these are contained on this page.
+-- All of these are contained on this page: clickable image-map on the
+-- left, target documentation on the right.
+-- Click and find out!
 CREATE TABLE "INTRODUCTION" (
 	-- The tools generating this page are
 	-- [sqliteconvert(1)](sqliteconvert.1.html), 

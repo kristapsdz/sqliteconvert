@@ -16,8 +16,6 @@
 				sqliteconvert: extract SQLite documentation
 			</h1>
 			<nav>
-				<a href="https://github.com/kristapsdz/sqliteconvert"><i class="fa fa-github"></i></a>
-				view: <a href="test.sql.html">SQL</a>,
 				<a href="sqliteconvert.1.html">sqliteconvert(1)</a>,
 				<a href="sqlite2dot.1.html">sqlite2dot(1)</a>,
 				<a href="sqlite2html.1.html">sqlite2html(1)</a>
