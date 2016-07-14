@@ -1,0 +1,77 @@
+.\"	$Id$
+.\"
+.\" Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd $Mdocdate: June 30 2016 $
+.Dt SQLITECONVERT 1
+.Os
+.Sh NAME
+.Nm sqliteconvert
+.Nd convert sqlite3 schema to an HTML5 viewer
+.\" .Sh LIBRARY
+.\" For sections 2, 3, and 9 only.
+.\" Not used in OpenBSD.
+.Sh SYNOPSIS
+.Nm sqliteconvert
+.Op Fl i
+.Op Fl f Ar template
+.Ar schema
+.Sh DESCRIPTION
+The
+.Nm
+utility converts an
+.Xr sqlite3 1
+schema file
+.Ar schema
+into an HTML5 file given
+.Ar template ,
+which defaults to
+.Pa @SHAREDIR@/schema.xml .
+It is essentially a wrapper around
+.Xr sqlite2dot 1
+and
+.Xr sqlite2html 1
+along with a reasonably-functional template file.
+Its options are as follows:
+.Bl -tag -width Ds
+.It Fl i
+Emits the image (a PNG file) referenced by the viewer.
+.It Fl f Ar template
+The template HTML5.
+This is not meaningful when
+.Fl i
+has been specified.
+.It Ar schema
+An SQLite schema file.
+.El
+.Pp
+The template file is reproduced as-is as the output except that any
+lines consisting of
+.Li @SCHEMA@
+are replaced by the image map and HTML5 fragment produced by
+.Xr sqlite2dot 1
+and
+.Xr sqlite2html 1 .
+.Sh SEE ALSO
+.Xr sqlite2dot 1 ,
+.Xr sqlite2html 1 ,
+.Xr sqlite3 1
+.\" .Sh STANDARDS
+.\" .Sh HISTORY
+.\" .Sh AUTHORS
+.\" .Sh CAVEATS
+.\" .Sh BUGS
+.\" .Sh SECURITY CONSIDERATIONS
+.\" Not used in OpenBSD.

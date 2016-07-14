@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8" /> 
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-		<title>Test of Image Map</title>
+		<title>sqliteconvert: extract SQLite documentation</title>
 		<link href="https://fonts.googleapis.com/css?family=Alegreya+Sans:300,300italic,600" rel="stylesheet" />
 		<link href="https://fonts.googleapis.com/css?family=Playfair+Display:400,400italic" rel="stylesheet" />
 		<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" />
@@ -13,17 +13,15 @@
 	<body>
 		<header>
 			<h1>
-				This is a demo of sqliteconvert.
+				sqliteconvert: extract SQLite documentation
 			</h1>
 			<nav>
 				<a href="https://github.com/kristapsdz/sqliteconvert"><i class="fa fa-github"></i></a>
-				View: <a href="test.sql.html">SQL</a> (<a href="test.sql">raw</a>),
+				view: <a href="test.sql.html">SQL</a>,
+				<a href="sqliteconvert.1.html">sqliteconvert(1)</a>,
 				<a href="sqlite2dot.1.html">sqlite2dot(1)</a>,
-				<a href="sqlite2html.1.html">sqlite2html(1)</a>.
+				<a href="sqlite2html.1.html">sqlite2html(1)</a>
 			</nav>
-			<div>
-				(Click anywhere on the lefthand image.)
-			</div>
 		</header>
 		<article>
 			<div class="browser">

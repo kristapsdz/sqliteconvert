@@ -21,13 +21,15 @@ PRAGMA journal_mode=WAL;
 -- database schemas. Documentation, in this regard, consists of the
 -- schema itself and comments prior to each table and comment.  What
 -- you're reading right now is part of the comment above the table
--- called test't1.  (The funny name is demonstrate table names from
--- literals.)
-/* This table references @test2 and @"test2". */
-CREATE TABLE "tes't1" (
+-- called ``INTRODUCTION''.
+-- The result of this extraction is this HTML5 page.
+-- It consists of an image showing the schema, the documentation, and an
+-- image map linking the two.
+-- All of these are contained on this page.
+CREATE TABLE "INTRODUCTION" (
 	-- To see the original SQL file, click on the ``SQL'' link in
 	-- the header of this file.
-	foo INTEGER NOT NULL,
+	tools INTEGER NOT NULL,
 	/* This is a foreign key. */
 	-- By the way, here I have some ``fancy quotes''.
 	test2id INTEGER NOT NULL,
@@ -38,7 +40,7 @@ CREATE TABLE "tes't1" (
 	/* Note our foreign key... */
 	FOREIGN KEY (test2id) REFERENCES test2(id),
 	-- This should be discarded.
-	unique (foo)
+	unique (tools)
 );
 
 -- This other table has its comments in here.
@@ -47,7 +49,7 @@ CREATE TABLE "tes't1" (
 CREATE TABLE test2 (
 	-- This column references another table and column.
 	-- You can also use foreign key constraints.
-	bar INTEGER NOT NULL REFERENCES "tes't1"(foo),
+	bar INTEGER NOT NULL REFERENCES "INTRODUCTION"(tools),
 	-- This is a primary key and shows escaping of special
 	-- characters, for example, \\-character---and an \@-sign.
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL

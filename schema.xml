@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" /> 
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<title>SQLite Database Schema</title>
+		<link href="https://fonts.googleapis.com/css?family=Alegreya+Sans:300,300italic,600" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css?family=Playfair+Display:400,400italic" rel="stylesheet" />
+		<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" />
+		<style>
+			body, html { margin: 0; height: 100%; }
+			body { height: 100%; max-height: 100%; font-family: "Alegreya Sans", sans-serif; display: flex; flex-direction: column; font-size: 12pt; }
+			input[type=checkbox] { display: none; }
+			article { flex: 1; padding: 12pt 12pt 0 12pt; }
+			header, footer { background-color: #eee; }
+			header { padding-top: 6pt; padding-bottom: 2pt; border-bottom: thin solid #ccc; text-align: center; font-size: 11pt; }
+			h1 { font-family: "Playfair Display", serif; font-size: 16pt; margin: 0; font-weight: normal; }
+			.browser { position: relative; height: 100%; width: 100%; }
+			.browser > * { width: 50%;  }
+			.browser > .toggle { width: auto; position: absolute; z-index: 3; top: 0; left: 0; }
+			.browser > .slide { width: auto; position: absolute; z-index: 3; bottom: 0; left: 0; }
+			.browser > .toggle, .browser > .slide input { background-color: rgba(0, 0, 0, 0.1); padding: 4pt; border-radius: 4pt; }
+			.browseimg { text-align: center; position: absolute; top: 0; left: 0; height: 100%; }
+			#zoom ~ article .zoom { display: inline; }
+			#zoom ~ article .unzoom { display: none; }
+			.browseimg img { max-height: 100%; max-width: 100%; }
+			#zoom:checked ~ article .browseimg { overflow: scroll; }
+			#zoom:checked ~ article .browseimg img { max-width: none; max-height: none; }
+			#zoom:checked ~ article .zoom { display: none; }
+			#zoom:checked ~ article .unzoom { display: inline; }
+			.browseeml { position: absolute; overflow-y: scroll; left: 50%; top: 0; height: 100%; }
+			.comment { padding: 0 6pt; }
+			.foreign { padding: 0 6pt; }
+			a { text-decoration: none; color: blue; }
+			dd { margin: 0; }
+			.tabs { margin-top: 0; }
+			.tabs .cols .foreign:before { content: 'Foreign key reference: '; opacity: 0.7; }
+			.tabs .cols .foreign { opacity: 0.9; }
+			.tabs > dt { font-weight: 600; }
+			dt, dd { padding: 6pt; }
+			.tabs > dt { padding-bottom: 0; }
+			.cols > dd { padding-top: 0; padding-bottom: 0; }
+			.cols > dt { padding-bottom: 0; font-style: italic; }
+			dt, dt + dd { transition: background-color 0.5s linear, color 0.5s linear; color: #888; }
+			dt { border-top-left-radius: 6pt; border-top-right-radius: 6pt; }
+			dt + dd { border-bottom-left-radius: 6pt; border-bottom-right-radius: 6pt; }
+			dt:target, dt:target + dd { background-color: #ddd; color: #000; }
+			dt:target + dd dt, dt:target + dd dt + dd { color: #444; }
+			footer { text-align: center; border-top: thin solid #ccc; font-size: smaller; padding: 8pt; }
+
+			@media only screen and (max-width: 480px), only screen and (max-device-width: 480px) {
+				h1 { font-size: 14pt; }
+				.browser > * { width: 100%; }
+				.browseimg { height: 50%; }
+				.browseeml { left: 0; top: 50%; height: 50%; }
+				article { padding: 6pt 6pt 0 6pt; }
+				footer { padding: 6pt; }
+			}
+		</style>
+		<script>
+			/*! Image Map Resizer
+			 *  Desc: Resize HTML imageMap to scaled image.
+			 *  Copyright: (c) 2014-15 David J. Bradshaw - dave@bradshaw.net
+			 *  License: MIT
+			 */
+			(function(){
+			    'use strict';
+
+			    function scaleImageMap(){
+
+				function resizeMap() {
+				    function resizeAreaTag(cachedAreaCoords,idx){
+					function scale(coord){
+					    var dimension = ( 1 === (isWidth = 1-isWidth) ? 'width' : 'height' );
+					    return Math.floor(Number(coord) * scallingFactor[dimension]);
+					}
+
+					var isWidth = 0;
+
+					areas[idx].coords = cachedAreaCoords.split(',').map(scale).join(',');
+				    }
+
+				    var scallingFactor = {
+					width  : image.width  / image.naturalWidth,
+					height : image.height / image.naturalHeight
+				    };
+
+				    cachedAreaCoordsArray.forEach(resizeAreaTag);
+				}
+
+				function getCoords(e){
+				    //Normalize coord-string to csv format without any space chars
+				    return e.coords.replace(/ *, */g,',').replace(/ +/g,',');
+				}
+
+				function debounce() {
+				    clearTimeout(timer);
+				    timer = setTimeout(resizeMap, 250);
+				}
+
+				function start(){
+				    if ((image.width !== image.naturalWidth) || (image.height !== image.naturalHeight)) {
+					resizeMap();
+				    }
+				}
+
+				function addEventListeners(){
+				    image.addEventListener('load',  resizeMap, false); //Detect late image loads in IE11
+				    window.addEventListener('focus',  resizeMap, false); //Cope with window being resized whilst on another tab
+				    window.addEventListener('resize', debounce,  false);
+				    window.addEventListener('readystatechange', resizeMap,  false);
+				    document.addEventListener('fullscreenchange', resizeMap,  false);
+				}
+
+				function beenHere(){
+				    return ('function' === typeof map._resize);
+				}
+
+				function setup(){
+				    areas                 = map.getElementsByTagName('area');
+				    cachedAreaCoordsArray = Array.prototype.map.call(areas, getCoords);
+				    image                 = document.querySelector('img[usemap="#'+map.name+'"]');
+				    map._resize           = resizeMap; //Bind resize method to HTML map element
+				}
+
+				var
+				    /*jshint validthis:true */
+				    map   = this,
+				    areas = null, cachedAreaCoordsArray = null, image = null, timer = null;
+
+				if (!beenHere()){
+				    setup();
+				    addEventListeners();
+				    start();
+				} else {
+				    map._resize(); //Already setup, so just resize map
+				}
+			    }
+
+			    function factory(){
+				function chkMap(element){
+				    if(!element.tagName) {
+					throw new TypeError('Object is not a valid DOM element');
+				    } else if ('MAP' !== element.tagName.toUpperCase()) {
+					throw new TypeError('Expected <MAP> tag, found <'+element.tagName+'>.');
+				    }
+				}
+
+				function init(element){
+				    if (element){
+					chkMap(element);
+					scaleImageMap.call(element);
+					maps.push(element);
+				    }
+				}
+
+				var maps;
+
+				return function imageMapResizeF(target){
+				    maps = [];  // Only return maps from this call
+
+				    switch (typeof(target)){
+					case 'undefined':
+					case 'string':
+					    Array.prototype.forEach.call(document.querySelectorAll(target||'map'),init);
+					    break;
+					case 'object':
+					    init(target);
+					    break;
+					default:
+					    throw new TypeError('Unexpected data type ('+typeof target+').');
+				    }
+
+				    return maps;
+				};
+			    }
+
+			    if (typeof define === 'function' && define.amd) {
+				define([],factory);
+			    } else if (typeof module === 'object' && typeof module.exports === 'object'){
+				module.exports = factory(); //Node for browserfy
+			    } else {
+				window.imageMapResize = factory();
+			    }
+			})();
+
+
+			var origx = -1, origy = -1;
+			function toggleSize(e)
+			{
+				var img;
+				img = document.getElementById('schema');
+				if (-1 === origx) {
+					origx = img.width;
+					origy = img.height;
+				}
+				if (e.checked) {
+					img.style.width = origx + 'px';
+					img.style.height = origy + 'px';
+				} else {
+					img.style.width = 'initial';
+					img.style.height = 'initial';
+				}
+			}
+			function updateSize(e)
+			{
+				var img;
+				img = document.getElementById('schema');
+				if (-1 === origx) {
+					origx = img.width;
+					origy = img.height;
+				}
+				img.style.width = (origx * e.value / 100.0) + 'px';
+				img.style.height = (origy * e.value / 100.0) + 'px';
+			}
+		</script>
+	</head>
+	<body>
+		<input type="checkbox" id="zoom" name="zoom" onchange="toggleSize(this); imageMapResize();" />
+		<header>
+			<h1>
+				Database Schema
+			</h1>
+		</header>
+		<article>
+			<div class="browser">
+				<label class="toggle" for="zoom">
+					<i title="Zoom in" class="fa fa-toggle-on zoom"></i>
+					<i title="Zoom out" class="fa fa-toggle-off unzoom"></i>
+				</label>
+				<div class="slide">
+					<input type="range" min="0" max="100" value="100" class="unzoom" onchange="updateSize(this);" />
+				</div>
+				<section class="browseimg">
+					<img src="schema.png" usemap="#G" id="schema" />
+				</section>
+				<section class="browseeml">
+					<!-- @SCHEMA@ -->
+				</section>
+			</div>
+		</article>
+		<footer>
+			<div>
+				<a href="https://github.com/kristapsdz/sqliteconvert"><i class="fa fa-github"></i></a> 
+				Generated with 
+				<a href="https://kristaps.bsd.lv/sqliteconvert">sqliteconvert</a>
+			</div>
+		</footer>
+		<script>
+			imageMapResize();
+		</script>
+	</body>
+</html>
