@@ -50,10 +50,10 @@ test.sql.html: test.sql
 	mandoc -Thtml -Ostyle=mandoc.css $< >$@
 
 schema.html: schema.sql schema.xml sqliteconvert
-	sh sqliteconvert schema.sql >$@
+	sh sqliteconvert -f schema.xml schema.sql >$@
 
 schema.png: schema.sql schema.xml sqliteconvert
-	sh sqliteconvert -i schema.sql >$@
+	sh sqliteconvert -f schema.xml -i schema.sql >$@
 
 sqliteconvert: sqliteconvert.sh sqlite2dot sqlite2html
 	sed "s!@SHAREDIR@!$(SHAREDIR)!g" sqliteconvert.sh >$@

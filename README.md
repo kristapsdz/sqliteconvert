@@ -2,17 +2,16 @@
 
 sqliteconvert is a set of tools to convert
 [sqlite3](https://www.sqlite.org/) schema files into documentation.
-It includes sqlite2dot, which converts into a
-[graphviz](http://www.graphviz.org) file; and sqlite2html, which
-converts into an HTML5 fragment.
+It includes
+[sqlite2dot(1)](https://kristaps.bsd.lv/sqliteconvert/sqlite2dot.1.html),
+which converts into a [graphviz](http://www.graphviz.org) file;
+[sqlite2html(1)](https://kristaps.bsd.lv/sqliteconvert/sqlite2html.1.html),
+which converts into an HTML5 fragment; and
+[sqliteconvert(1)](https://kristaps.bsd.lv/sqliteconvert/sqliteconvert.1.html),
+which pulls these tools together with some sane default templates.
 
-These tools are designed to be used together: sqlite2dot first converts
-(via [dot](http://graphviz.org/pdf/dotguide.pdf)) into a PNG (-Tpng),
-then into a client-side image map (-Tcmapx).  These are referenced from
-an HTML5 page, which also includes the output of sqlite2html.  Readers
-can then click on columns in the graphical output.
-
-**These tools are still under development**.
+For a full-fledged example, see
+[schema.html](https://kristaps.bsd.lv/sqliteconvert/schema.html).
 
 ## Installation
 

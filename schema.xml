@@ -11,11 +11,11 @@
 			body, html { margin: 0; height: 100%; }
 			body { height: 100%; max-height: 100%; font-family: "Alegreya Sans", sans-serif; display: flex; flex-direction: column; font-size: 12pt; }
 			input[type=checkbox] { display: none; }
-			article { flex: 1; padding: 12pt 12pt 0 12pt; }
+			article { flex: 1; display: flex; padding: 12pt 12pt 0 12pt; }
 			header, footer { background-color: #eee; }
 			header { padding-top: 6pt; padding-bottom: 2pt; border-bottom: thin solid #ccc; text-align: center; font-size: 11pt; }
 			h1 { font-family: "Playfair Display", serif; font-size: 16pt; margin: 0; font-weight: normal; }
-			.browser { position: relative; height: 100%; width: 100%; }
+			.browser { position: relative; flex: 1; width: 100%; }
 			.browser > * { width: 50%;  }
 			.browser > .toggle { width: auto; position: absolute; z-index: 3; top: 0; left: 0; }
 			.browser > .slide { width: auto; position: absolute; z-index: 3; bottom: 0; left: 0; }
@@ -142,7 +142,7 @@
 				    if(!element.tagName) {
 					throw new TypeError('Object is not a valid DOM element');
 				    } else if ('MAP' !== element.tagName.toUpperCase()) {
-					throw new TypeError('Expected <MAP> tag, found <'+element.tagName+'>.');
+					    throw new TypeError('Expected <MAP> tag, found <'+element.tagName+'>.');
 				    }
 				}
 
@@ -232,7 +232,7 @@
 					<input type="range" min="0" max="100" value="100" class="unzoom" onchange="updateSize(this);" />
 				</div>
 				<section class="browseimg">
-					<img src="schema.png" usemap="#G" id="schema" />
+					<img src="schema.png" usemap="#G" id="schema" alt="Database schema" />
 				</section>
 				<section class="browseeml">
 					<!-- @SCHEMA@ -->
