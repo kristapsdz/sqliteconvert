@@ -229,7 +229,7 @@
 					<i title="Zoom out" class="fa fa-toggle-off unzoom"></i>
 				</label>
 				<div class="slide">
-					<input type="range" min="0" max="100" value="100" class="unzoom" onchange="updateSize(this);" />
+					<input type="range" min="0" max="100" value="100" class="unzoom" onchange="updateSize(this); imageMapResize();" />
 				</div>
 				<section class="browseimg">
 					<img src="schema.png" usemap="#G" id="schema" alt="Database schema" />
